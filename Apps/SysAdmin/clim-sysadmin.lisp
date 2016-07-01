@@ -1,0 +1,85 @@
+(defpackage :clim-sysadmin
+  (:use :clim :oliphaunt)
+  (:export #:run-sysadmin))
+
+(in-package :clim-sysadmin)
+
+(defclass lisp-threads-pane (application-pane))
+(define-application-frame lisp-threads-frame ()
+  ()
+  (:panes (lisp-threads-pane (make-lisp-threads-pane)))
+  (:layouts (default (vertically () (scrolling () lisp-threads-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass process-list-pane (application-pane))
+(define-application-frame process-list-frame ()
+  ()
+  (:panes (process-list-pane (make-process-list-pane)))
+  (:layouts (default (vertically () (scrolling () process-list-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass memory-map-pane (application-pane))
+(define-application-frame memory-map-frame ()
+  ()
+  (:panes (memory-map-pane (make-memory-map-pane)))
+  (:layouts (default (vertically () (scrolling () memory-map-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass user-info-pane (application-pane))
+(define-application-frame user-info-frame ()
+  ()
+  (:panes (user-info-pane (make-user-info-pane)))
+  (:layouts (default (vertically () (scrolling () user-info-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass user-list-pane (application-pane))
+(define-application-frame user-list-frame ()
+  ()
+  (:panes (user-list-pane (make-user-list-pane)))
+  (:layouts (default (vertically () (scrolling () user-list-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass user-group-info-pane (application-pane))
+(define-application-frame user-group-info-frame ()
+  ()
+  (:panes (user-group-info-pane (make-user-group-info-pane)))
+  (:layouts (default (vertically () (scrolling () user-group-info-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass user-group-list-pane (application-pane))
+(define-application-frame user-group-list-frame ()
+  ()
+  (:panes (user-group-list-pane (make-user-group-list-pane)))
+  (:layouts (default (vertically () (scrolling () user-group-list-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass user-search-pane (application-pane))
+(define-application-frame user-search-frame ()
+  ()
+  (:panes (user-search-pane (make-user-search-pane)))
+  (:layouts (default (vertically () (scrolling () user-search-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass user-group-search-pane (application-pane))
+(define-application-frame user-group-search-frame ()
+  ()
+  (:panes (user-group-search-pane (make-user-group-search-pane)))
+  (:layouts (default (vertically () (scrolling () user-group-search-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass machine-device-list-pane (application-pane))
+(define-application-frame machine-device-list-frame ()
+  ()
+  (:panes (machine-device-list-pane (make-machine-device-list-pane)))
+  (:layouts (default (vertically () (scrolling () machine-device-list-pane))))
+  (:geometry :height 600 :width 400))
+
+(defclass machine-device-info-pane (application-pane))
+(define-application-frame machine-device-info-frame ()
+  ()
+  (:panes (device-info-pane (make-device-info-pane)))
+  (:layouts (default (vertically () (scrolling () device-info-pane))))
+  (:geometry :height 600 :width 400))
+
+
+

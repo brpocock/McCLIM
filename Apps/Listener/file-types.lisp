@@ -211,12 +211,12 @@
 
 (defun read-the-lines (pathname)
   (let ((elements nil))
-    (with-open-file (in pathname)
+    (with-open-file (in pathname :external-format :utf-8)
       (loop
-        (multiple-value-bind (val more-input)
-            (read-slashified-line in)
-          (unless more-input (return-from read-the-lines elements))
-          (when val (push val elements)))))))
+         (multiple-value-bind (val more-input)
+             (read-slashified-line in)
+           (unless more-input (return-from read-the-lines elements))
+           (when val (push val elements)))))))
 
 (defun skip-whitespace (string &optional (start 0) end)
   (when start

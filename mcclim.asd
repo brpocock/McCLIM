@@ -66,7 +66,7 @@ interface management system."
                #+mcclim-gtkairo #:mcclim-gtkairo     #| Defunct now                   |#
                #+mcclim-beagle  #:mcclim-beagle      #| OSX native (clozure only)     |#
 
-               ;; null backend
+                 ;; null backend
                #:mcclim-null))
 
 (defsystem #:mcclim/extensions

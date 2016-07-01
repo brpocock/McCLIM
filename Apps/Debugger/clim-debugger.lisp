@@ -91,18 +91,18 @@
 
 (defclass debugger-info ()
   ((the-condition :accessor the-condition
-	          :initarg :the-condition)
+                  :initarg :the-condition)
    (condition-message :accessor condition-message
-		      :initarg  :condition-message)
+                      :initarg  :condition-message)
    (type-of-condition :accessor type-of-condition
-	              :initarg  :type-of-condition)
+                      :initarg  :type-of-condition)
    (condition-extra :accessor condition-extra
-	            :initarg  :condition-extra)
+                    :initarg  :condition-extra)
    (restarts :accessor restarts
-	     :initarg :restarts)
+             :initarg :restarts)
    (backtrace :accessor backtrace
-	      :initarg :backtrace)))
-   
+              :initarg :backtrace)))
+
 (defclass minimized-stack-frame-view (textual-view)())
 (defclass maximized-stack-frame-view (textual-view)())
 
@@ -114,22 +114,22 @@
 (defclass stack-frame ()
   ((clim-view       :accessor view :initform +minimized-stack-frame-view+)
    (frame-string    :accessor frame-string
-		    :initarg  :frame-string)
+                    :initarg  :frame-string)
    (frame-no        :accessor frame-no
-		    :initarg :frame-no)
+                    :initarg :frame-no)
    (frame-variables :accessor frame-variables
-		    :initarg :frame-variables)))
+                    :initarg :frame-variables)))
 
 (defun compute-backtrace (start end)
-  (loop for frame    in   (swank-backend::compute-backtrace start end)
-	for frame-no from 0
-	collect (make-instance
-		 'stack-frame
-		 :frame-string    (let ((*print-pretty* nil))
-				    (with-output-to-string (stream) 
-				      (swank-backend::print-frame frame stream)))
-		 :frame-no        frame-no
-		 :frame-variables (swank-backend::frame-locals frame-no))))
+  (loop for frame in (swank-backend::compute-backtrace start end)
+     for frame-no from 0
+     collect (make-instance
+              'stack-frame
+              :frame-string (let ((*print-pretty* nil))
+                              (with-output-to-string (stream) 
+                                (swank-backend::print-frame frame stream)))
+              :frame-no frame-no
+              :frame-variables (swank-backend::frame-locals frame-no))))
 
 (defmethod expand-backtrace ((info debugger-info) (value integer))
   (with-slots (backtrace) info
@@ -145,11 +145,11 @@
 
 (defun make-debugger-pane (condition)
   (with-look-and-feel-realization ((frame-manager *application-frame*)
-				   *application-frame*) 
+                                   *application-frame*) 
     (make-pane 'debugger-pane 
                :condition-info condition
-	       :display-function #'display-debugger
-	       :end-of-line-action :allow
+               :display-function #'display-debugger
+               :end-of-line-action :allow
                :end-of-page-action :scroll
                :width 800)))
 
@@ -204,14 +204,14 @@
   (frame-exit *application-frame*))
 
 (define-clim-debugger-command (com-toggle-stack-frame-view 
-			       :name "Toggle stack frame view")
+                               :name "Toggle stack frame view")
     ((stack-frame 'stack-frame))
   (progn
     (clouseau:inspector stack-frame)
     (if (and (eq +minimized-stack-frame-view+ (view stack-frame))
              (frame-variables stack-frame))
-	(setf (view stack-frame) +maximized-stack-frame-view+)
-	(setf (view stack-frame) +minimized-stack-frame-view+))
+        (setf (view stack-frame) +maximized-stack-frame-view+)
+        (setf (view stack-frame) +minimized-stack-frame-view+))
     (change-space-requirements (frame-panes *application-frame*))))
 
 
@@ -221,7 +221,7 @@
 
 (define-presentation-to-command-translator more-backtraces
     (more-type com-more clim-debugger :gesture :select)
-    (object)
+  (object)
   (list object))
 
 (define-presentation-to-command-translator invoke-inspector
@@ -236,7 +236,7 @@
 
 (define-presentation-to-command-translator invoke-restart
     (restart com-invoke-restart clim-debugger :gesture :select)
-    (object)
+  (object)
   (list object))
 
 
@@ -246,11 +246,11 @@
 
 (defun std-form (pane first second &key (family :serif))
   (formatting-row 
-      (pane)
-    (with-text-family (pane :sans-serif)
-      (formatting-cell (pane) (bold (pane) (format t "~A" first))))
-    (formatting-cell (pane)
-      (with-text-family (pane family) 
+   (pane)
+   (with-text-family (pane :sans-serif)
+     (formatting-cell (pane) (bold (pane) (format t "~A" first))))
+   (formatting-cell (pane)
+                    (with-text-family (pane family) 
                       (filling-output (pane :fill-width 600)
                                       (format pane "~A" second))))))
 
@@ -304,8 +304,8 @@
     (display-backtrace frame pane)
     (change-space-requirements 
      pane
-			      :width (bounding-rectangle-width (stream-output-history pane))
-			      :height (bounding-rectangle-height (stream-output-history pane)))))
+     :width (bounding-rectangle-width (stream-output-history pane))
+     :height (bounding-rectangle-height (stream-output-history pane)))))
 
 
 (defun display-backtrace (frame pane)
@@ -318,15 +318,15 @@
   (format t " ")
   (formatting-table (pane)
     (with-text-family (pane :serif)
-    (loop for stack-frame in (backtrace (condition-info pane))
-	  for i from 0
-	  do (formatting-row (pane)
-               (with-output-as-presentation (pane stack-frame 'stack-frame)
+      (loop for stack-frame in (backtrace (condition-info pane))
+         for i from 0
+         do (formatting-row (pane)
+              (with-output-as-presentation (pane stack-frame 'stack-frame)
                 (with-text-face (pane :bold)
                   (formatting-cell (pane)
                     (format t "~A: " i)))
-                 (formatting-cell (pane)
-                   (present stack-frame 'stack-frame 
+                (formatting-cell (pane)
+                  (present stack-frame 'stack-frame 
                            :view (view stack-frame)))))))
     (when (>= (length (backtrace (condition-info pane))) 20)
       (formatting-row (pane)
@@ -337,8 +337,8 @@
 
 
 (define-presentation-method present (object (type stack-frame) stream
-				     (view minimized-stack-frame-view)
-				     &key acceptably for-context-type)
+                                            (view minimized-stack-frame-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (format t "~A  " (frame-string object))
   (unless (frame-variables object)
@@ -347,8 +347,8 @@
       (princ "(no locals)" stream))))
 
 (define-presentation-method present (object (type stack-frame) stream
-				     (view maximized-stack-frame-view)
-				     &key acceptably for-context-type)
+                                            (view maximized-stack-frame-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (progn
     (filling-output (stream :fill-width 400)
@@ -356,47 +356,47 @@
     (fresh-line)
     (cond 
       ((frame-variables object)
-    (with-text-family (stream :sans-serif)
+       (with-text-family (stream :sans-serif)
          (with-text-face (stream :bold)
            (format t "  Locals:")))
-    (fresh-line)
-    (format t "     ")
+       (fresh-line)
+       (format t "     ")
        (formatting-table (stream)
-     (loop for (name n identifier id value val) in (frame-variables object)
+                         (loop for (name n identifier id value val) in (frame-variables object)
                             do (formatting-row (stream)
-	       (formatting-cell (stream) (format t "~A" n))
-	       (formatting-cell (stream) (format t "="))
+                                               (formatting-cell (stream) (format t "~A" n))
+                                               (formatting-cell (stream) (format t "="))
                                                (formatting-cell (stream) (present val 'inspect))))))
       (t (with-text-size (stream :small)
            (princ "(no locals)" stream))))
     (fresh-line)))
 
 (define-presentation-method present (object (type restart) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                            (view textual-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (with-text-face (stream :bold)
     (substitute #\Space #\- 
                 (string-capitalize (symbol-name (restart-name object))))))
 
 (define-presentation-method present (object (type more-type) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                            (view textual-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (with-text-face (stream :bold)
     (with-text-size (stream :large)
       (format t " Show 10 more… "))))
 
 (define-presentation-method present (object (type inspect) stream
-				     (view textual-view)
-				     &key acceptably for-context-type)
+                                            (view textual-view)
+                                            &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (format t "~A" object))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;   Starting the debugger   ;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (defun debugger-restart (restart me-or-my-encapsulation)
@@ -410,13 +410,13 @@
    (lambda ()
      (unwind-protect
           (run-debugger-frame 
-	     (make-instance 
+           (make-instance 
             'condition-info
-	      :the-condition        condition
-	      :type-of-condition    (type-of condition)
-	      :condition-message    (swank::safe-condition-message condition)
-	      :condition-extra      (swank::condition-extras       condition)
-	      :restarts             (compute-restarts)
+            :the-condition condition
+            :type-of-condition (type-of condition)
+            :condition-message (swank::safe-condition-message condition)
+            :condition-extra (swank::condition-extras condition)
+            :restarts (compute-restarts)
             :backtrace (compute-backtrace 0 20))
            me-or-my-encapsulation)))))
 

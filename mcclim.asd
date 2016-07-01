@@ -499,7 +499,7 @@ Deleting it, that it may be replaced with a working one.~@:>")
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
 (defsystem :mcclim
-  :version "0.9.7-dev"
+  :version "0.9.7"
   :depends-on (:clim-looks))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
@@ -509,3 +509,4 @@ Deleting it, that it may be replaced with a working one.~@:>")
 ;; This feature is notably used by ESA and DREI, in cases where they need to
 ;; know whether they are compiled with McCLIM or another CLIM implementation.
 (pushnew :mcclim *features*) 
+

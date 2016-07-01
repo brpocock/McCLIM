@@ -14,15 +14,19 @@
 #+sbcl
 (defun display-disassembly (object pane)
   (let ((disassembly-string (with-output-to-string (*standard-output*)
-			      (disassemble object))))
+                              (disassemble object))))
     (with-input-from-string (stream disassembly-string)
       (with-text-family (pane :fix)
-	(loop for line = (read-line stream nil nil)
-	      while line
-	      do (let ((shortened-line (subseq line 2)))
-		   (when (> (length shortened-line) 0)
-		     (fresh-line pane)
-		     (princ shortened-line pane))))))))
+        (loop for line = (read-line stream nil nil)
+           while line
+           do (let ((shortened-line (subseq line 2)))
+                (cond ((> (length shortened-line) 0)
+                       (fresh-line pane))
+                      ((find #\; shortened-line)
+                       (write-string (subseq shortened-line 0 (position #\; shortened-line)) pane)
+                       (with-text-face (pane :serif)
+                         (write-string (subseq shortened-line (posision #\; shortened-line)) pane)))
+                      (t (princ shortened-line pane)))))))))
 
 ;; For Lisps that don't have their own custom display function, we
 ;; just print the output of DISASSEMBLE and hope it looks decent.

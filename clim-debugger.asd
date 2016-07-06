@@ -6,7 +6,7 @@
 (in-package :clim-debugger.system)
 
 (defsystem :clim-debugger
-  :depends-on (:mcclim)
+  :depends-on (:mcclim :clouseau)
   :components
   ((:module "Apps/Debugger"
             :pathname #.(make-pathname :directory '(:relative "Apps" "Debugger"))

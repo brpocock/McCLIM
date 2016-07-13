@@ -89,7 +89,7 @@
 
 ;;;
 ;;;   Data model
-(defclass debugger-info ()
+(defclass condition-info ()
   ((the-condition :accessor the-condition
                   :initarg :the-condition)
    (condition-message :accessor condition-message
@@ -131,7 +131,7 @@
               :frame-no frame-no
               :frame-variables (swank-backend::frame-locals frame-no))))
 
-(defmethod expand-backtrace ((info debugger-info) (value integer))
+(defmethod expand-backtrace ((info condition-info) (value integer))
   (with-slots (backtrace) info
     (setf backtrace (compute-backtrace 0 (+ (length backtrace) 10)))))
 

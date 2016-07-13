@@ -1,7 +1,7 @@
 ;;; (c)  copyright  2004  by  Peter  Mechlenborg  (metch@daimi.au.dk)  …
 ;;; Modified (2016) by Bruce-Robert Fenn Pocock (mostly for æsthetics)
 
-
+ 
 ;;; This library is free software; you can redistribute it and/or modify
 ;;; it under  the terms  of the  GNU Library  General Public  License as
 ;;; published by the  Free Software Foundation; either version  2 of the
@@ -23,8 +23,6 @@
 ;;; Slime project, and the graphical  layout is also heavily inspired by
 ;;; Slime.  Because   of  Slime  I   hope  that  this  works   on  other
 ;;; implementations than SBCL.
-
-
 
 ;;;
 ;;; Test:
@@ -67,8 +65,6 @@
 ;;;   keys as well. Then  we have to add a notion  of the current frame.
 ;;;   Would this be useful?
 ;;;
-;;; - The   backtrace    seems   to   start   at    the   wrong   place?
-;;; - compared to Slime?
 
 
 (defpackage "CLIM-DEBUGGER"
@@ -78,77 +74,81 @@
 (in-package :clim-debugger)
 
 
-;;;
-;;;   Misc
-;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   Misc   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;; Borrowed from Andy Hefner
 (defmacro bold ((stream) &body body)
   `(with-text-face (,stream :bold)
      ,@body))
 
 
-;;;
-;;;   Data model
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   Data model    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defclass condition-info ()
   ((the-condition :accessor the-condition
-                  :initarg :the-condition)
+	          :initarg :the-condition)
    (condition-message :accessor condition-message
-                      :initarg  :condition-message)
+		      :initarg  :condition-message)
    (type-of-condition :accessor type-of-condition
-                      :initarg  :type-of-condition)
+	              :initarg  :type-of-condition)
    (condition-extra :accessor condition-extra
-                    :initarg  :condition-extra)
+	            :initarg  :condition-extra)
    (restarts :accessor restarts
-             :initarg :restarts)
+	     :initarg :restarts)
    (backtrace :accessor backtrace
-              :initarg :backtrace)))
-
+	      :initarg :backtrace)))
+   
 (defclass minimized-stack-frame-view (textual-view)())
 (defclass maximized-stack-frame-view (textual-view)())
 
-(defparameter +minimized-stack-frame-view+
+(defparameter +minimized-stack-frame-view+ 
   (make-instance 'minimized-stack-frame-view))
-(defparameter +maximized-stack-frame-view+
+(defparameter +maximized-stack-frame-view+ 
   (make-instance 'maximized-stack-frame-view))
 
 (defclass stack-frame ()
   ((clim-view       :accessor view :initform +minimized-stack-frame-view+)
    (frame-string    :accessor frame-string
-                    :initarg  :frame-string)
+		    :initarg  :frame-string)
    (frame-no        :accessor frame-no
-                    :initarg :frame-no)
+		    :initarg :frame-no)
    (frame-variables :accessor frame-variables
-                    :initarg :frame-variables)))
+		    :initarg :frame-variables)))
 
 (defun compute-backtrace (start end)
   (loop for frame in (swank-backend::compute-backtrace start end)
-     for frame-no from 0
-     collect (make-instance
-              'stack-frame
+	for frame-no from 0
+	collect (make-instance
+		 'stack-frame
               :frame-string (let ((*print-pretty* nil))
-                              (with-output-to-string (stream)
-                                (swank-backend::print-frame frame stream)))
+				    (with-output-to-string (stream) 
+				      (swank-backend::print-frame frame stream)))
               :frame-no frame-no
-              :frame-variables (swank-backend::frame-locals frame-no))))
+		 :frame-variables (swank-backend::frame-locals frame-no))))
 
 (defmethod expand-backtrace ((info condition-info) (value integer))
   (with-slots (backtrace) info
     (setf backtrace (compute-backtrace 0 (+ (length backtrace) 10)))))
 
 
-;;;
-;;;   CLIM stuff
-;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   CLIM stuff   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defclass debugger-pane (application-pane)
   ((condition-info :reader condition-info :initarg :condition-info)))
 
 (defun make-debugger-pane (condition)
   (with-look-and-feel-realization ((frame-manager *application-frame*)
-                                   *application-frame*)
-    (make-pane 'debugger-pane
+				   *application-frame*) 
+    (make-pane 'debugger-pane 
                :condition-info condition
-               :display-function #'display-debugger
-               :end-of-line-action :allow
+	       :display-function #'display-debugger
+	       :end-of-line-action :allow
                :end-of-page-action :scroll
                :width 800)))
 
@@ -168,18 +168,20 @@
                            :debugger me-or-my-encapsulation)))
 
 
-;;;
-;;;   Presentation types
-;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   Presentation types   ;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define-presentation-type stack-frame () :inherit-from 't)
 (define-presentation-type restart     ())
 (define-presentation-type more-type   ())
 (define-presentation-type inspect     ())
 
 
-;;;
-;;;   Commands
-;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   Commands   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define-clim-debugger-command (com-more :name "More backtraces")
     ((pane 'more-type))
   (expand-backtrace (condition-info pane) 10))
@@ -200,52 +202,54 @@
                     (clim-debugger-or-encapsulation *application-frame*))
   (frame-exit *application-frame*))
 
-(define-clim-debugger-command (com-toggle-stack-frame-view
-                               :name "Toggle stack frame view")
+(define-clim-debugger-command (com-toggle-stack-frame-view 
+			       :name "Toggle stack frame view")
     ((stack-frame 'stack-frame))
   (progn
     (clouseau:inspector stack-frame)
     (if (and (eq +minimized-stack-frame-view+ (view stack-frame))
              (frame-variables stack-frame))
-        (setf (view stack-frame) +maximized-stack-frame-view+)
-        (setf (view stack-frame) +minimized-stack-frame-view+))
+	(setf (view stack-frame) +maximized-stack-frame-view+)
+	(setf (view stack-frame) +minimized-stack-frame-view+))
     (change-space-requirements (frame-panes *application-frame*))))
 
 
-;;;
-;;;   Command translators
-;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   Command translators   ;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define-presentation-to-command-translator more-backtraces
     (more-type com-more clim-debugger :gesture :select)
-  (object)
+    (object)
   (list object))
 
 (define-presentation-to-command-translator invoke-inspector
     (inspect com-invoke-inspector clim-debugger :gesture :select)
-  (object)
+    (object)
   (list object))
 
 (define-presentation-to-command-translator toggle-stack-frame-view
     (stack-frame com-toggle-stack-frame-view clim-debugger :gesture :select)
-  (object)
+    (object)
   (list object))
 
 (define-presentation-to-command-translator invoke-restart
     (restart com-invoke-restart clim-debugger :gesture :select)
-  (object)
+    (object)
   (list object))
 
 
-;;;
-;;;   Display debugging info
-;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   Display debugging info   ;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun std-form (pane first second &key (family :serif))
-  (formatting-row
-   (pane)
-   (with-text-family (pane :sans-serif)
-     (formatting-cell (pane) (bold (pane) (format t "~A" first))))
-   (formatting-cell (pane)
-                    (with-text-family (pane family)
+  (formatting-row 
+      (pane)
+    (with-text-family (pane :sans-serif)
+      (formatting-cell (pane) (bold (pane) (format t "~A" first))))
+    (formatting-cell (pane)
+      (with-text-family (pane family) 
                       (filling-output (pane :fill-width 600)
                                       (format pane "~A" second))))))
 
@@ -281,11 +285,11 @@
                                                            (princ (or (condition-message (condition-info pane))
                                                                       (format pane "~a" (the-condition (condition-info pane))))
                                                                   pane)))))
-                      (when (condition-extra (condition-info pane))
-                        (std-form pane "Extra:" (condition-extra (condition-info pane))
-                                  :family :fix)))
+      (when (condition-extra (condition-info pane))
+        (std-form pane "Extra:" (condition-extra (condition-info pane))
+                  :family :fix)))
     (fresh-line)
-
+    
     (with-text-family (pane :sans-serif)
       (with-text-size (pane :very-large)
         (with-text-face (pane :bold)
@@ -299,12 +303,12 @@
     (display-backtrace frame pane)
     (change-space-requirements
      pane
-     :width (bounding-rectangle-width (stream-output-history pane))
-     :height (bounding-rectangle-height (stream-output-history pane)))))
+			      :width (bounding-rectangle-width (stream-output-history pane))
+			      :height (bounding-rectangle-height (stream-output-history pane)))))
 
 
 (defun display-backtrace (frame pane)
-  (declare (ignore frame))
+  (declare (ignore frame)) 
   (with-text-family (pane :sans-serif)
     (with-text-size (pane :very-large)
       (with-text-face (pane :bold)
@@ -313,27 +317,27 @@
   (format t " ")
   (formatting-table (pane)
                     (with-text-family (pane :serif)
-                      (loop for stack-frame in (backtrace (condition-info pane))
-                         for i from 0
-                         do (formatting-row (pane)
-                                            (with-output-as-presentation (pane stack-frame 'stack-frame)
+    (loop for stack-frame in (backtrace (condition-info pane))
+	  for i from 0
+	  do (formatting-row (pane)
+               (with-output-as-presentation (pane stack-frame 'stack-frame)
                                               (with-text-face (pane :bold)
                                                 (formatting-cell (pane)
                                                                  (format t "~A: " i)))
-                                              (formatting-cell (pane)
-                                                               (present stack-frame 'stack-frame
+                 (formatting-cell (pane)
+                   (present stack-frame 'stack-frame 
                                                                         :view (view stack-frame)))))))
-                    (when (>= (length (backtrace (condition-info pane))) 20)
-                      (formatting-row (pane)
-                                      (formatting-cell (pane))
-                                      (formatting-cell (pane)
-                                                       (bold (pane)
-                                                             (present pane 'more-type)))))))
+    (when (>= (length (backtrace (condition-info pane))) 20)
+      (formatting-row (pane)
+        (formatting-cell (pane))
+        (formatting-cell (pane)
+          (bold (pane)
+            (present pane 'more-type)))))))
 
 
 (define-presentation-method present (object (type stack-frame) stream
-                                            (view minimized-stack-frame-view)
-                                            &key acceptably for-context-type)
+				     (view minimized-stack-frame-view)
+				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (format t "~A  " (frame-string object))
   (unless (frame-variables object)
@@ -342,8 +346,8 @@
       (princ "(no locals)" stream))))
 
 (define-presentation-method present (object (type stack-frame) stream
-                                            (view maximized-stack-frame-view)
-                                            &key acceptably for-context-type)
+				     (view maximized-stack-frame-view)
+				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (progn
     (filling-output (stream :fill-width 400)
@@ -351,46 +355,48 @@
     (fresh-line)
     (cond
       ((frame-variables object)
-       (with-text-family (stream :sans-serif)
+    (with-text-family (stream :sans-serif)
          (with-text-face (stream :bold)
            (format t "  Locals:")))
-       (fresh-line)
-       (format t "     ")
+    (fresh-line)
+    (format t "     ")
        (formatting-table (stream)
-                         (loop for (name n identifier id value val) in (frame-variables object)
+     (loop for (name n identifier id value val) in (frame-variables object)
                             do (formatting-row (stream)
-                                               (formatting-cell (stream) (format t "~A" n))
-                                               (formatting-cell (stream) (format t "="))
+	       (formatting-cell (stream) (format t "~A" n))
+	       (formatting-cell (stream) (format t "="))
                                                (formatting-cell (stream) (present val 'inspect))))))
       (t (with-text-size (stream :small)
            (princ "(no locals)" stream))))
     (fresh-line)))
 
 (define-presentation-method present (object (type restart) stream
-                                            (view textual-view)
-                                            &key acceptably for-context-type)
+				     (view textual-view)
+				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (with-text-face (stream :bold)
     (substitute #\Space #\-
                 (string-capitalize (symbol-name (restart-name object))))))
 
 (define-presentation-method present (object (type more-type) stream
-                                            (view textual-view)
-                                            &key acceptably for-context-type)
+				     (view textual-view)
+				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (with-text-face (stream :bold)
     (with-text-size (stream :large)
       (format t " Show 10 more… "))))
 
 (define-presentation-method present (object (type inspect) stream
-                                            (view textual-view)
-                                            &key acceptably for-context-type)
+				     (view textual-view)
+				     &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (format t "~A" object))
 
 
-;;;
-;;;   Starting the debugger
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   Starting the debugger   ;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 (defun debugger-restart (restart me-or-my-encapsulation)
   (if restart
@@ -399,11 +405,11 @@
       (abort)))
 
 (defun debugger (condition me-or-my-encapsulation)
-  (swank-backend::call-with-debugging-environment
+  (swank-backend::call-with-debugging-environment 
    (lambda ()
      (unwind-protect
           (run-debugger-frame
-           (make-instance
+	     (make-instance 
             'condition-info
             :the-condition condition
             :type-of-condition (type-of condition)
@@ -415,11 +421,13 @@
 
 
 
-;;;
-;;;   For testing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;   For testing   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun simple-break ()
   (with-simple-restart  (continue "Continue from interrupt.")
     (let ((*debugger-hook* #'debugger))
-      (invoke-debugger
-       (make-condition 'simple-error
+      (invoke-debugger 
+       (make-condition 'simple-error 
                        :format-control "Debugger test")))))

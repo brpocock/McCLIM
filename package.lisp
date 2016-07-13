@@ -184,9 +184,7 @@
            #:with-output-to-string #:with-package-iterator #:with-simple-restart #:with-slots
            #:with-standard-io-syntax #:write #:write-byte #:write-char #:write-line #:write-sequence
            #:write-string #:write-to-string #:y-or-n-p #:yes-or-no-p #:zerop))
-        (packages
-         #+gcl    '(:lisp :pcl)
-         #-(or gcl) '(:common-lisp))
+        (packages '(:common-lisp))
         (gray-symbols
          '(#:fundamental-stream
            #:fundamental-input-stream
@@ -216,15 +214,7 @@
            #:stream-clear-output
            #:stream-read-byte
            #:stream-write-byte ))
-        (gray-packages
-         `(#+ecl                   ,@'(:gray)
-           #+clisp                 ,@'(:gray)
-           #+cmu                   ,@'(:ext)
-           #+scl                   ,@'(:ext)
-	   #+(or mcl openmcl)      ,@'(:ccl)
-           #+allegro               ,@'(:common-lisp :excl :stream)
-           #+harlequin-common-lisp ,@'(:stream)
-           #+sbcl                  ,@'(:sb-gray))) )
+        (gray-packages '(#:trivial-gray-streams)))
     ;;
     (labels ((seek-symbol (name packages)
                ;; seek the a symbol named 'name' in `packages'
@@ -2054,97 +2044,5 @@
   (:import-from :excl compile-system load-system)
   (:intern #:letf))
 
-;(defpackage :CLIM
-;  (:use #+nil :clim-extensions ; will use it later
-;        :clim-internals :common-lisp)
-;  )
-
-;(let ((climi-package (find-package :climi))
-;      (ext-package   (find-package :clim-extensions)))
-;  (do-external-symbols (sym ext-package)
-;    (export sym climi-package)))
-
-;(let ((clim-package  (find-package :clim))
-;      (climi-package (find-package :climi)))
-;  (do-external-symbols (sym climi-package)
-;    (export sym clim-package)))
-
-;(use-package :clim-extensions :clim)
-
-(defpackage :clim-demo
-  (:use :clim-extensions :clim :clim-lisp)
-  #+excl(:import-from :excl compile-system load-system exit)
-  (:export #:demodemo))
-
 (defpackage :clim-user
   (:use :clim :clim-lisp))
-
-(defpackage :goatee
-  (:use :clim :clim-lisp :clim-sys)
-  (:import-from :clim-internals #:letf)
-  (:shadow #:point)
-  (:export
-   #:execute-gesture-command
-   #:goatee-input-editing-mixin
-   #:simple-screen-area))
-
-;;; Macros and definitions for interfacing with a host Lisp's FFI.
-(defpackage :clim-ffi
-  (:use :clim-lisp)
-  (:export
-   #:cref
-   #:make-record
-   #:null-pointer
-   #:with-c-strings
-   #:with-c-data
-   ;; Types
-   #:signed-char
-   #:signed-byte
-   #:short
-   #:signed-halfword
-   #:int
-   #:signed-fullword
-   #:long
-   #:signed-short
-   #:signed-int
-   #:signed-long
-   #:signed-doubleword
-   #:char
-   #:unsigned-char
-   #:unsigned-byte
-   #:unsigned-short
-   #:unsigned-halfword
-   #:unsigned-int
-   #:unsigned-fullword
-   #:unsigned-long
-   #:unsigned-doubleword
-   #:float
-   #:double
-   #:void
-   #:address
-
-   ))
-
-(defpackage :clim-tab-layout
-  (:use :clim :clim-lisp)
-  (:export #:tab-layout
-	   #:tab-layout-pane
-	   #:tab-layout-pages
-	   #:tab-page
-	   #:tab-page-tab-layout
-	   #:tab-page-title
-	   #:tab-page-pane
-	   #:tab-page-presentation-type
-	   #:tab-page-drawing-options
-	   #:add-page
-	   #:remove-page
-	   #:tab-layout-enabled-page
-	   #:sheet-to-page
-	   #:find-tab-page-named
-	   #:switch-to-page
-	   #:remove-page-named
-	   #:with-tab-layout
-           #:com-switch-to-tab-page
-	   #:com-remove-tab-page
-	   #:internal-child-p
-	   #:note-tab-page-changed))

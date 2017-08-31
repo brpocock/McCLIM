@@ -108,19 +108,28 @@
     ((:bold :italic) . "bold:oblique")))
 
 (defun parse-fontconfig-output (s)
-  (let* ((match-string (concatenate 'string (string #\Tab) "file:"))
-         (matching-line
-          (loop for l = (read-line s nil nil)
-                while l
-                if (= (mismatch l match-string) (length match-string))
-                   do (return l)))
-         (filename (when matching-line
-                     (probe-file
-                      (subseq matching-line
-                              (1+ (position #\" matching-line :from-end nil :test #'char=))
-                              (position #\" matching-line :from-end t   :test #'char=))))))
-    (when filename
-      (parse-namestring filename))))
+  (loop until (eql :eof (peek-char nil s nil :eof)) 
+     do 
+       (let* ((match-string (concatenate 'string (string #\Tab) "file:"))
+              (matching-line
+               (loop for l = (read-line s nil nil)
+                  while l
+                  if (= (mismatch l match-string) (length match-string))
+                  do (return l)))
+              (filename (when matching-line 
+                          (probe-file
+                           (subseq matching-line
+                                   (1+ (position #\" matching-line :from-end nil :test #'char=))
+                                   (position #\" matching-line :from-end t   :test #'char=)))))
+              (fontformat-match (concatenate 'string (string #\Tab) "fontformat:"))
+              (fontformat-truetype-p
+               (loop for l = (read-line s nil nil)
+                  while l
+                  if (= (mismatch l fontformat-match) (length fontformat-match))
+                  do (return (search "TrueType" l :test #'string-equal)))))
+         (when (and filename 
+                    fontformat-truetype-p)
+           (return (parse-namestring filename))))))
 
 (defun warn-about-unset-font-path ()
   (cerror "Proceed"

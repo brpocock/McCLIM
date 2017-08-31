@@ -23,16 +23,6 @@
 
 ;;; Gadget Test/Demo
 
-;;; To run the gadget test:   (clim-demo::gadget-test)
-
-;;; McCLIM contains an alternate look and feel entitled "pixie" which
-;;; is not the default. It can by used by creating your application
-;;; using an alternate frame manager, clim-internals::pixie/clx-look.
-
-;;; To run the gadget test using the pixie frame manager:
-;;; (gadget-test 'clim-internals::pixie/clx-look)
-;;; This may require you to load the clim-looks system.
-
 (defun gadget-test (&optional frame-manager-name)
   (run-frame-top-level
    (if frame-manager-name 
@@ -142,6 +132,7 @@
                  :orientation :vertical
                  :current-color +black+
                  :value 0)
+     #+(or)
      (slider-v1  :slider
                  :min-value 0
                  :max-value 100
@@ -161,6 +152,7 @@
                  :orientation :vertical
                  :current-color +black+
                  :value 0)
+     #+(or)
      (radar      (make-pane 'radar-pane :name 'radar))
      (push-btn   (lowering (:border-width 3 :background +Gray83+)
                    (horizontally ()
@@ -169,7 +161,8 @@
                        :label "Radiate"
                        :activate-callback
                          (lambda (pane &rest args)
-                             nil))
+                           (declare (ignore pane args))
+                           nil))
                      (push-button
                        :label "No, Push Me")
                      (push-button

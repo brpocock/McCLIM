@@ -27,16 +27,14 @@
 (defvar *default-server-path* nil)
 
 ;;; - CLX is the de-facto reference backend.
-;;; - Prefer Beagle and Gtkairo over CLX, since they get installed only
+;;; - Prefer Beagle over CLX, since it gets installed only
 ;;;   on explicit user request anyway.
-;;; - If both are present, use Beagle in favour of Gtkairo, since
-;;;   it is the native OSX backend.
 ;;; - Null are in this list mostly to document its existence, and is
 ;;;   not currently a complete backend we would want to make a
 ;;;   default.  Put it after CLX, so that it won't actually be
 ;;;   reached.
 (defvar *server-path-search-order*
-    '(:beagle :gtkairo :clx :null))
+    '(:beagle :clx :null))
 
 (defun find-default-server-path ()
   (loop for port in *server-path-search-order*
@@ -183,23 +181,6 @@
       t))))
 
 (defgeneric distribute-event (port event))
-
-(defmethod distribute-event ((port basic-port) event)
-  (cond
-   ((typep event 'keyboard-event)
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'window-event)
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'pointer-event)
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'window-manager-delete-event)
-    ;; not sure where this type of event should get sent - mikemac
-    ;; This seems fine; will be handled by the top-level-sheet-pane - moore
-    (dispatch-event (event-sheet event) event))
-   ((typep event 'timer-event)
-    (error "Where do we send timer-events?"))
-   (t
-    (error "Unknown event ~S received in DISTRIBUTE-EVENT" event))))
 
 (defmacro with-port-locked ((port) &body body)
   (let ((fn (gensym "CONT.")))

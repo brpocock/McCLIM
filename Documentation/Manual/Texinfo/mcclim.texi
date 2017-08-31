@@ -1,0 +1,107 @@
+% @c -*- Coding: utf-8; Mode: Texinfo -*-
+% @c Note that Texinfo does not support UTF-8. Please do not use literal
+% @c UTF-8 characters in this document.
+\input texinfo
+
+@setfilename mcclim
+@settitle McCLIM User's Manual
+
+@set MCCLIMVERSION 0.9.7-dev
+
+@copying
+Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
+@end copying
+
+@dircategory Common Lisp
+@direntry
+* McCLIM User's Manual: (mcclim). A free implementation of CLIM.
+@end direntry
+
+@titlepage
+@title McCLIM User's Manual
+
+@sp 5
+@center @titlefont{The Users Guide}
+@sp 2
+@center @titlefont{and}
+@sp 2
+@center @titlefont{API Reference}
+@sp 2
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+
+@end titlepage
+
+@iftex
+@contents
+@end iftex
+
+@ifnottex
+@node Top
+@top McCLIM User's Manual
+@insertcopying
+@end ifnottex
+
+@include macros.texi
+
+@menu
+* Introduction::
+* User manual::
+* Reference manual::
+* Developer manual::
+* Extensions::
+* Applications::
+* Auxiliary material::
+* Concept index::
+* Variable index::
+* Function and macro index::
+@end menu
+
+@node Introduction
+@unnumbered Introduction
+@include introduction.txi
+
+@c @node User manual
+@c @chapter User manual
+@include user-manual.txi
+
+@c @node Reference manual
+@c @chapter Reference manual
+@include reference-manual.txi
+
+@c @node Developer manual
+@c @chapter Developer manual
+@include developer-manual.txi
+
+@c @node Extensions
+@c @chapter Extensions
+@include extensions.txi
+
+@node Applications
+@chapter Applications
+@include chap-debugger.texi
+@include chap-inspector.texi
+@include chap-listener.texi
+
+@c @node Auxiliary material
+@c @unnumbered Auxiliary material
+@include auxiliary-material.txi
+
+@node Concept index
+@unnumbered Concept index
+
+@printindex cp
+
+@node Variable index
+@unnumbered Variable index
+
+@printindex vr
+
+@node Function and macro index
+@unnumbered Function and macro index
+
+@printindex fn
+
+@bye

@@ -1,25 +1,15 @@
-(in-package :clim-listener)
-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-LISTENER; -*-
+;;;
+;;; Command table and menu definitions
+;;;
 ;;; (C) Copyright 2003,2008 by Andy Hefner (ahefner@gmail.com)
 ;;; (C) Copyright 2004 by Paolo Amoroso (amoroso@mclink.it)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;; See toplevel file 'Copyright' for the copyright details.
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
 
+(in-package :clim-listener)
 
-;;; Command table and menu definitions
 
 (define-command-table application-commands)
 
@@ -91,15 +81,16 @@
 (define-presentation-method present (object (type standard-method)
 				     stream (view textual-view)
 				     &key &allow-other-keys)
-  (let ((name (clim-mop:generic-function-name
-	       (clim-mop:method-generic-function object)))
-	(qualifiers (clim-mop:method-qualifiers object))
-	(specializers (clim-mop:method-specializers object))
-	(lambda-list (clim-mop:method-lambda-list object))
+  (let ((name (c2mop:generic-function-name
+	       (c2mop:method-generic-function object)))
+	(qualifiers (method-qualifiers object))
+	(specializers (c2mop:method-specializers object))
+	(lambda-list (c2mop:method-lambda-list object))
 	(class-of-t (find-class t)))
     (format stream "~S ~{~S ~}(" name qualifiers)
-    (multiple-value-bind (required optional rest key key-present)
-	(climi::parse-lambda-list lambda-list)
+    (multiple-value-bind (required optional rest key allow-other-keys aux key-present)
+        (alexandria:parse-ordinary-lambda-list lambda-list)
+      (declare (ignore allow-other-keys aux))
       (loop
 	 for spec in specializers
 	 for arg in required
@@ -116,8 +107,8 @@
 		 (with-output-as-presentation (stream spec 'specializer
                                                       :single-box t)
                    (if (typep spec 'class)
-                       (format stream "~S" (clim-mop:class-name spec))
-                       (format stream "~S" `(eql ,(clim-mop:eql-specializer-object spec)))))
+                       (format stream "~S" (class-name spec))
+                       (format stream "~S" `(eql ,(c2mop:eql-specializer-object spec)))))
                  (write-char #\) stream))))
       (when optional
 	(format stream " &optional ~{~A ~^ ~}" optional))
@@ -139,7 +130,7 @@
 (define-presentation-method present (object (type generic-function)
                                      stream (view textual-view)
                                      &key &allow-other-keys)
-  (princ (clim-mop:generic-function-name object) stream))
+  (princ (c2mop:generic-function-name object) stream))
 
 (define-presentation-method accept
     ((type generic-function) stream (view textual-view) &key)
@@ -203,7 +194,7 @@
      :documentation ((object stream) (format stream "Class of ~A" object))
      :gesture t)
   (object)
-  (clim-mop:class-name object))
+  (class-name object))
 
 (define-presentation-translator expression-to-function-name
   (expression function-name lisp-dev-commands
@@ -413,7 +404,7 @@
                      :gesture :select
                      :documentation "Room"
                      :pointer-documentation "Room")
-  ())
+    (object))
   
 
 (define-presentation-to-command-translator com-show-class-subclasses-translator
@@ -469,10 +460,10 @@
 								   :text-style text-style)
 				       ;; Present class name rather than class here because the printing of the
 				       ;; class object itself is rather long and freaks out the pointer doc pane.
-				       (with-output-as-presentation (stream (clim-mop:class-name class) 'class-name
+				       (with-output-as-presentation (stream (class-name class) 'class-name
                                                                             :single-box t)
 					; (surrounding-output-with-border (stream :shape :drop-shadow)
-					 (princ (clim-mop:class-name class) stream)))) ;)
+					 (princ (class-name class) stream)))) ;)
 				 inferior-fun
 				 :stream stream
 				 :merge-duplicates t
@@ -501,7 +492,7 @@
   (let ((class (frob-to-class class-spec)))
     (if (null class)
 	(note "~A is not a defined class." class-spec)
-        (class-grapher *standard-output* class #'clim-mop:class-direct-superclasses
+        (class-grapher *standard-output* class #'c2mop:class-direct-superclasses
                        :orientation orientation))))
 
 (define-command (com-show-class-subclasses :name "Show Class Subclasses"
@@ -513,7 +504,7 @@
      (orientation 'keyword :prompt "orientation" :default :horizontal))     
   (let ((class (frob-to-class class-spec)))    
     (if (not (null class))        
-        (class-grapher *standard-output* class #'clim-mop:class-direct-subclasses
+        (class-grapher *standard-output* class #'c2mop:class-direct-subclasses
                        :orientation orientation)
         (note "~A is not a defined class." class-spec))))
 
@@ -523,20 +514,20 @@
    definitions for this slot in the order they occur along the CPL."
   (mapcan (lambda (cpl-class)
             (copy-list
-             (remove slot-name (clim-mop:class-direct-slots cpl-class)
-                     :key #'clim-mop:slot-definition-name :test-not #'eql)))
-          (clim-mop:class-precedence-list class)))
+             (remove slot-name (c2mop:class-direct-slots cpl-class)
+                     :key #'c2mop:slot-definition-name :test-not #'eql)))
+          (c2mop:class-precedence-list class)))
 
 (defun present-slot (slot class &key (stream *standard-output*))
   "Formats a slot definition into a table row."
-  (let* ((name (clim-mop:slot-definition-name slot))
-         (type (clim-mop:slot-definition-type slot))
-         (initargs (clim-mop:slot-definition-initargs slot))
-         (initfunc (clim-mop:slot-definition-initfunction slot))
-         (initform (clim-mop:slot-definition-initform slot))
+  (let* ((name (c2mop:slot-definition-name slot))
+         (type (c2mop:slot-definition-type slot))
+         (initargs (c2mop:slot-definition-initargs slot))
+         (initfunc (c2mop:slot-definition-initfunction slot))
+         (initform (c2mop:slot-definition-initform slot))
          (direct-slots (direct-slot-definitions class name))         
-         (readers (mapcan (lambda (x) (copy-list (clim-mop:slot-definition-readers x))) direct-slots))
-         (writers (mapcan (lambda (x) (copy-list (clim-mop:slot-definition-writers x))) direct-slots))
+         (readers (mapcan (lambda (x) (copy-list (c2mop:slot-definition-readers x))) direct-slots))
+         (writers (mapcan (lambda (x) (copy-list (c2mop:slot-definition-writers x))) direct-slots))
          (documentation (first (remove nil (mapcar (lambda (x) (documentation x t)) direct-slots))))
          (*standard-output* stream))
 
@@ -586,17 +577,17 @@
 
 (defun earliest-slot-definer (slot class)
   "Returns the earliest class in the CPL of CLASS which defines SLOT."
-  (let ((name (clim-mop:slot-definition-name slot)))
-    (dolist (class (reverse (clim-mop:class-precedence-list class)))
-      (dolist (slot-b (clim-mop:class-direct-slots class))
-        (when (eq name (clim-mop:slot-definition-name slot-b))
+  (let ((name (c2mop:slot-definition-name slot)))
+    (dolist (class (reverse (c2mop:class-precedence-list class)))
+      (dolist (slot-b (c2mop:class-direct-slots class))
+        (when (eq name (c2mop:slot-definition-name slot-b))
           (return-from earliest-slot-definer class)))))
   (error "Slot ~W does not appear to be defined in ~W" slot class))
 
 (defun class-sorted-slots (class)
   "Sort the slots in order of definition within the CPL, superclasses first."
-  (let ((cpl (clim-mop:class-precedence-list class)))
-    (sort (copy-list (clim-mop:class-slots class))
+  (let ((cpl (c2mop:class-precedence-list class)))
+    (sort (copy-list (c2mop:class-slots class))
           (lambda (a b)
             (< (position (earliest-slot-definer a class) cpl)
                (position (earliest-slot-definer b class) cpl))))))
@@ -623,9 +614,9 @@
 
 (defun present-the-slots (class)  
   (let* ((slots (class-sorted-slots class))
-         (instance-slots (remove-if (lambda (x) (not (eq :instance (clim-mop:slot-definition-allocation x)))) slots))
+         (instance-slots (remove-if (lambda (x) (not (eq :instance (c2mop:slot-definition-allocation x)))) slots))
          (other-slots (set-difference slots instance-slots))
-         (allocation-types (remove-duplicates (mapcar #'clim-mop:slot-definition-allocation other-slots))))
+         (allocation-types (remove-duplicates (mapcar #'c2mop:slot-definition-allocation other-slots))))
     (when other-slots
       (underlining (t) (format t "~&Instance Slots~%")))
     (present-slot-list instance-slots class)
@@ -633,7 +624,7 @@
       (underlining (t)
         (format t "~&Allocation: ~A~%" (friendly-slot-allocation-type alloc)))
       (present-slot-list (remove-if (lambda (x)
-                                      (not (eq alloc (clim-mop:slot-definition-allocation x))))
+                                      (not (eq alloc (c2mop:slot-definition-allocation x))))
                                     other-slots)
                          class))))
 
@@ -646,9 +637,9 @@
          (finalized-p (and class
                            (typep class 'standard-class)
                            (progn
-                             (clim-mop:finalize-inheritance class)
-                             (clim-mop:class-finalized-p class))))
-         (slots (and finalized-p (clim-mop:class-slots class))))
+                             (c2mop:finalize-inheritance class)
+                             (c2mop:class-finalized-p class))))
+         (slots (and finalized-p (c2mop:class-slots class))))
     (cond
      ((null class)
       (note "~A is not a defined class.~%" class-name))
@@ -661,8 +652,8 @@
      (t (invoke-as-heading
          (lambda ()
            (format t "~&Slots for ")
-           (with-output-as-presentation (t (clim-mop:class-name class) 'class-name :single-box t)
-             (princ (clim-mop:class-name class)))))
+           (with-output-as-presentation (t (class-name class) 'class-name :single-box t)
+             (princ (class-name class)))))
         (present-the-slots class)))))
 
 (defparameter *ignorable-internal-class-names*
@@ -693,7 +684,7 @@ if you are interested in fixing this."))
    (mapcan 
     (lambda (class) 
       (copy-list (x-specializer-direct-generic-functions class)))
-    (remove-ignorable-classes (clim-mop:class-precedence-list class)))))
+    (remove-ignorable-classes (c2mop:class-precedence-list class)))))
 
 (defun slot-name-sortp (a b)
   (flet ((slot-name-symbol (x)
@@ -724,7 +715,7 @@ if you are interested in fixing this."))
     (if (null class)
         (note "~A is not a defined class." class-spec)
       (let ((funcs (sort (class-funcs class) #'slot-name-sortp
-                         :key #'clim-mop:generic-function-name)))
+                         :key #'c2mop:generic-function-name)))
         (with-text-size (t :small)
           (format-items funcs 
             :printer (lambda (item stream)
@@ -733,15 +724,15 @@ if you are interested in fixing this."))
 
 (defun method-applicable-to-args-p (method args arg-types)
   (loop
-     for specializer in (clim-mop:method-specializers method)
+     for specializer in (c2mop:method-specializers method)
      for arg in args
      for arg-type in arg-types
      unless (cond ((eq arg-type :wild)
 		   t)
-		  ((typep specializer 'clim-mop:eql-specializer)
+		  ((typep specializer 'c2mop:eql-specializer)
 		   (and (not (eq arg arg-type))
 			    (eql arg
-				 (clim-mop:eql-specializer-object
+				 (c2mop:eql-specializer-object
 				  specializer))))
 		  ((eq arg arg-type)
 		   (subtypep arg-type specializer))
@@ -753,31 +744,31 @@ if you are interested in fixing this."))
   (mapcan #'(lambda (method)
 	      (when (method-applicable-to-args-p method args arg-types)
 		(list method)))
-	  (clim-mop:generic-function-methods gf)))
+	  (c2mop:generic-function-methods gf)))
 
 (defun sort-methods-by-args (methods arg-types)
   (let ((cpls (mapcar #'(lambda (type)
 			  (if (eq type :wild)
 			      nil
-			      (clim-mop:class-precedence-list type)))
+			      (c2mop:class-precedence-list type)))
 		      arg-types)))
     (flet ((sorter (meth1 meth2)
 	     (loop
-		for spec1 in (clim-mop:method-specializers meth1)
-		for spec2 in (clim-mop:method-specializers meth2)
+		for spec1 in (c2mop:method-specializers meth1)
+		for spec2 in (c2mop:method-specializers meth2)
 		for arg-type in arg-types
 		for cpl in cpls
-		for spec1-cpl = (unless (typep spec1 'clim-mop:eql-specializer)
-				  (clim-mop:class-precedence-list spec1))
-		for spec2-cpl = (unless (typep spec1 'clim-mop:eql-specializer)
-				  (clim-mop:class-precedence-list spec2))
+		for spec1-cpl = (unless (typep spec1 'c2mop:eql-specializer)
+				  (c2mop:class-precedence-list spec1))
+		for spec2-cpl = (unless (typep spec1 'c2mop:eql-specializer)
+				  (c2mop:class-precedence-list spec2))
 		do (cond ((eq spec1 spec2)) ;Keep going
 			 ((eq arg-type :wild)
-			  (cond ((typep spec1 'clim-mop:eql-specializer)
+			  (cond ((typep spec1 'c2mop:eql-specializer)
 				 (unless (typep spec2
-						'clim-mop:eql-specializer)
+						'c2mop:eql-specializer)
 				   (return-from sorter t)))
-				((typep spec1 'clim-mop:eql-specializer)
+				((typep spec1 'c2mop:eql-specializer)
 				 (return-from sorter nil))
 				((subtypep spec1 spec2)
 				 (return-from sorter t))
@@ -791,9 +782,9 @@ if you are interested in fixing this."))
 					   ((< cpl-len1 cpl-len2)
 					    (return-from sorter nil)))))))
 			 ;; An actual instance
-			 ((typep spec1 'clim-mop:eql-specializer)
+			 ((typep spec1 'c2mop:eql-specializer)
 			  (return-from sorter t))
-			 ((typep spec2 'clim-mop:eql-specializer)
+			 ((typep spec2 'c2mop:eql-specializer)
 			  (return-from sorter nil))
 			 (t (let ((pos1 (position spec1 cpl))
 				  (pos2 (position spec2 cpl)))
@@ -806,13 +797,14 @@ if you are interested in fixing this."))
       (sort methods #'sorter))))
 
 (defun show-specialized-methods (gf stream methods arg-types)
+  (declare (ignore gf))
   (let ((before nil)
 	(after nil)
 	(around nil)
 	(primary nil))
     (loop
        for meth in methods
-       for (qualifier) = (clim-mop:method-qualifiers meth)
+       for (qualifier) = (method-qualifiers meth)
        do (case qualifier
 	    (:before
 	     (push meth before))
@@ -847,8 +839,8 @@ if you are interested in fixing this."))
 	  (return-from make-gf-specialized-ptype nil))))
     (unless (typep gf 'generic-function)
       (return-from make-gf-specialized-ptype nil))
-    (let ((required (climi::parse-lambda-list
-		     (clim-mop::generic-function-lambda-list gf))))
+    (let ((required (alexandria:parse-ordinary-lambda-list
+		     (c2mop:generic-function-lambda-list gf))))
       (loop
 	 for arg in required
 	 collect (make-presentation-type-specifier
@@ -874,7 +866,7 @@ if you are interested in fixing this."))
   (let ((doc-string (documentation gf t)))
     (with-text-face (*standard-output* :italic)
       (format *standard-output* "Lambda list:~%"))
-    (format *standard-output* "~S~%" (clim-mop:generic-function-lambda-list
+    (format *standard-output* "~S~%" (c2mop:generic-function-lambda-list
 				      gf))
     (when doc-string
       (with-text-face (*standard-output* :italic)
@@ -883,28 +875,28 @@ if you are interested in fixing this."))
       (with-text-face (*standard-output* :italic)
 	(format *standard-output* "Classes:~%"))
       (let ((class-list nil)
-	    (meths (clim-mop:generic-function-methods gf)))
+	    (meths (c2mop:generic-function-methods gf)))
 	(loop
 	   for m in meths
-	   do (loop for arg in (clim-mop:method-specializers m)
-		 unless (typep arg 'clim-mop:eql-specializer)
+	   do (loop for arg in (c2mop:method-specializers m)
+		 unless (typep arg 'c2mop:eql-specializer)
 		 do (pushnew arg class-list)))
 	(loop
 	   for class in class-list
 	   do (progn
 		(with-output-as-presentation (*standard-output*
-					      (clim-mop:class-name class)
+					      (class-name class)
 					      'class-name
                                               :single-box t)
 		  (format *standard-output*
-			  "~S~%" (clim-mop:class-name class)))))))
+			  "~S~%" (class-name class)))))))
     (when methods
       (let ((args nil)
 	    (arg-types nil))
 	(if (null specialized)
 	    (setq args
 		  (mapcar (constantly :wild)
-			  (clim-mop:generic-function-argument-precedence-order
+			  (c2mop:generic-function-argument-precedence-order
 			   gf))
 		  arg-types
 		  args)
@@ -1044,7 +1036,7 @@ if you are interested in fixing this."))
   (terpri stream))
 
 (defun actual-name (pathname)
-  (if (directoryp pathname)
+  (if (cl-fad:directory-pathname-p pathname)
       (if (stringp (car (last (pathname-directory pathname))))
           (car (last (pathname-directory pathname)))
           (directory-namestring pathname))
@@ -1059,8 +1051,8 @@ if you are interested in fixing this."))
   (mapcar (lambda (x) (sort-pathnames x sort-by))
           (multiple-value-list
            (if (not group-dirs) (values list)
-             (values (remove-if-not #'directoryp list)
-                     (remove-if #'directoryp list))))))
+             (values (remove-if-not #'cl-fad:directory-pathname-p list)
+                     (remove-if #'cl-fad:directory-pathname-p list))))))
 
 (defun garbage-name-p (name)
   (when (> (length name) 2)
@@ -1079,23 +1071,12 @@ if you are interested in fixing this."))
                    (and hide-garbage (garbage-name-p name))))
              seq :key #'actual-name))
 
-(defun show-directory-pathnames (pathname)
-  "Convert the pathname entered by the user into a query pathname
- (the pathname which will be passed to cl:directory, potentially a
- wild pathname), and a base pathname (which directory entries may
- be printed relative to in the fashion of enough-namestring)."
-  (values (if (wild-pathname-p pathname)
-              pathname
-              (gen-wild-pathname pathname))
-          (strip-filespec pathname)))
-
 ;; Change to using an :ICONIC view for pathnames?
-
 (define-command (com-show-directory :name "Show Directory"
 				    :command-table filesystem-commands
                                     :menu t
 				    :provide-output-destination-keyword t)
-    ((pathname 'pathname #+nil(or 'string 'pathname) :prompt "pathname")
+    ((pathname 'pathname :prompt "pathname")
      &key
      (sort-by '(member name size modify none) :default 'name)
      (show-hidden  'boolean :default nil :prompt "show hidden")
@@ -1106,13 +1087,19 @@ if you are interested in fixing this."))
      (full-names 'boolean :default nil :prompt "show full name?")
      (list-all-direct-subdirectories 'boolean :default nil :prompt "list all direct subdirectories?"))
 
-  (multiple-value-bind (query-pathname base-pathname)
-      (show-directory-pathnames pathname)
-    
-    (let ((dir (if list-all-direct-subdirectories
-                   (list-directory-with-all-direct-subdirectories query-pathname)
-                   (list-directory query-pathname))))
-
+  (let* ((pathname (probe-file pathname))
+	 (query-pathname (make-pathname :name (or (pathname-name pathname) :wild)
+                                        :type (or (pathname-type pathname) :wild)
+                                        :version (or (pathname-version pathname) :wild)))
+         (base-pathname (cl-fad:pathname-directory-pathname pathname))
+         (dir (uiop:while-collecting (files)
+		(mapc (lambda (path)
+			(when (or (pathname-match-p path query-pathname)
+				  (and list-all-direct-subdirectories
+				       (cl-fad:directory-pathname-p path)))
+			  ;; files is a collector defined above
+			  (files (truename path))))
+		      (cl-fad:list-directory base-pathname)))))
     (with-text-family (t :sans-serif)
       (invoke-as-heading
        (lambda ()
@@ -1122,7 +1109,7 @@ if you are interested in fixing this."))
             (present query-pathname 'pathname))
            (t
             (format t "Contents of ")
-            (present (directory-namestring query-pathname) 'pathname)))))
+            (present pathname 'pathname)))))
 
       (when (parent-directory pathname)
         (with-output-as-presentation (t (parent-directory pathname)
@@ -1139,8 +1126,6 @@ if you are interested in fixing this."))
         ;; of the "Parent Directory" line.
         (terpri))
 
-
-
       (dolist (group (split-sort-pathnames dir group-directories sort-by))
         (unless show-all
           (setf group (filter-garbage-pathnames group show-hidden hide-garbage)))
@@ -1154,22 +1139,11 @@ if you are interested in fixing this."))
                                                             nil
                                                             base-pathname))))
            (multiple-value-bind (x y) (stream-cursor-position *standard-output*)
+             (declare (ignore x))
              (setf (stream-cursor-position *standard-output*) (values 0 y))))
           (:list (dolist (ent group)
                    (let ((ent (merge-pathnames ent pathname)))
-                    (pretty-pretty-pathname ent *standard-output* full-names))))))))))
-
-#+nil   ; OBSOLETE
-(define-presentation-to-command-translator show-directory-translator
-  (clim:pathname com-show-directory filesystem-commands :gesture :select
-		 :pointer-documentation ((object stream)
-					 (format stream "Show directory ~A" object))
-                 :tester-definitive t
-		 :tester ((object)
-			  (directoryp object)))
-  (object)
-  (list object))
-
+                     (pretty-pretty-pathname ent *standard-output* full-names)))))))))
 
 (define-command (com-change-directory :name "Change Directory"
                                       :menu t
@@ -1177,10 +1151,12 @@ if you are interested in fixing this."))
   ((pathname 'pathname :prompt "pathname"))
   (let ((pathname (merge-pathnames
                    ;; helpfully fix things if trailing slash wasn't entered
-                   (coerce-to-directory pathname))))
+                   (cl-fad:pathname-as-directory pathname))))
     (if (not (probe-file pathname))
         (note "~A does not exist.~%" pathname)
-        (change-directory pathname))))
+        (progn
+	  (uiop:chdir pathname)
+	  (setf *default-pathname-defaults* pathname)))))
 
 (define-command (com-up-directory :name "Up Directory"
                                   :menu t
@@ -1188,7 +1164,8 @@ if you are interested in fixing this."))
   ()
   (let ((parent (parent-directory *default-pathname-defaults*)))
     (when parent
-      (change-directory parent)
+      (uiop:chdir parent)
+      (setf *default-pathname-defaults* parent)
       (italic (t)
         (format t "~&The current directory is now ")
         (present (truename parent))
@@ -1205,7 +1182,7 @@ if you are interested in fixing this."))
                                  (format stream "Change to this directory"))
                  
 		 :tester ((object)
-			  (directoryp object)))
+			  (cl-fad:directory-pathname-p object)))
   (object)
   (list object))
 
@@ -1228,7 +1205,7 @@ if you are interested in fixing this."))
   (values nil nil))
 
 (defmethod mime-type-to-command ((mime-type symbol) pathname)
-  (mime-type-to-command (clim-mop:class-prototype (find-class mime-type nil)) pathname))
+  (mime-type-to-command (c2mop:class-prototype (find-class mime-type nil)) pathname))
 
 ;; Move these elsewhere.
 
@@ -1257,7 +1234,7 @@ if you are interested in fixing this."))
                  (format nil "Show Files Matching ~A" pathname)))
         ((not (probe-file pathname))
          (values nil nil nil))
-        ((directoryp pathname)
+        ((cl-fad:directory-pathname-p pathname)
          (values `(com-show-directory ,pathname)
                  "Show Directory"
                  (format nil "Show Directory ~A" pathname)))
@@ -1308,7 +1285,7 @@ if you are interested in fixing this."))
                                     :menu t
                                     :command-table directory-stack-commands)
   ((pathname 'pathname :prompt "directory"))
-  (let ((pathname (merge-pathnames (coerce-to-directory pathname))))
+  (let ((pathname (merge-pathnames (cl-fad:pathname-as-directory pathname))))
     (if (not (probe-file pathname))
         (note "~A does not exist.~%" pathname)
         (progn (push *default-pathname-defaults* *directory-stack*)
@@ -1361,7 +1338,7 @@ if you are interested in fixing this."))
 
 (define-presentation-to-command-translator display-dir-stack-translator
   (directory-stack com-display-directory-stack filesystem-commands :gesture :select)
-  () ())
+    (object))
 
 (define-command (com-edit-file :name "Edit File"
                                :menu t
@@ -1374,7 +1351,9 @@ if you are interested in fixing this."))
   (clim:pathname com-edit-file filesystem-commands :gesture :select
 		 :pointer-documentation ((object stream)
 					 (format stream "Edit ~A" object))
-		 :documentation ((stream) (format stream "Edit File"))
+		 :documentation ((object stream)
+                                 (declare (ignore object))
+                                 (format stream "Edit File"))
 		 :tester ((object)
 			  (and (not (wild-pathname-p object))
                                (probe-file object)
@@ -1394,7 +1373,9 @@ if you are interested in fixing this."))
   (clim:pathname com-show-file filesystem-commands :gesture :select
 		 :pointer-documentation ((object stream)
 					 (format stream "Show ~A" object))
-		 :documentation ((stream) (format stream "Show File"))
+		 :documentation ((object stream)
+                                 (declare (ignore object))
+                                 (format stream "Show File"))
 		 :tester ((object)
 			  (and (not (wild-pathname-p object))
                                (probe-file object)
@@ -1433,18 +1414,19 @@ if you are interested in fixing this."))
   (function-name com-edit-definition lisp-commands :gesture :select
 	  :pointer-documentation ((object stream)
 				  (format stream "Edit Definition of ~A" object))
-	  :documentation ((stream) (format stream "Edit Definition")))
-  (object)
+	  :documentation ((object stream)
+                          (declare (ignore object))
+                          (format stream "Edit Definition")))
+    (object)
   (list object))
 		   
 
 (defun show-file (pathname)
-  (let ((*standard-output* (open-window-stream :scroll-bars :both)) )
-    (with-open-file (in pathname)
-      (loop for line = (read-line in nil)
-	while line
-	do (progn (princ line)
-		  (terpri))))))
+  (let ((content (alexandria:read-file-into-string pathname))
+	(*standard-output* (open-window-stream :scroll-bars :both
+					       :label (namestring pathname))))
+    (princ content)
+    (terpri)))
 
 ;;; Eval
 
@@ -1656,7 +1638,9 @@ if you are interested in fixing this."))
     (package com-set-package lisp-commands
              :pointer-documentation ((object stream)
                                      (format stream "Set current package to ~A" (package-name object)))
-             :documentation ((stream) (format stream "Set Package"))
+             :documentation ((object stream)
+                             (declare (ignore object))
+                             (format stream "Set Package"))
              :menu t
              :tester ((object) (not (eql *package* object))))
     (object)

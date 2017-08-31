@@ -23,7 +23,8 @@
 ;;; The actual McCLIM system that people should to use in their ASDF
 ;;; package dependency lists.
 (defsystem :mcclim
-  :author "Alexey Dejneka
+  :author "Alessandro Serra
+Alexey Dejneka
 Andreas Fuchs
 Andy Hefner
 Arnaud Rouanet
@@ -31,7 +32,9 @@ Brian Mastenbrook
 Brian Spilsbury
 Christophe Rhodes
 Clemens Fruhwirth
+Cyrus Harmon
 Daniel Barlow
+Daniel Kochmański
 Duncan Rose
 Edena Pixel
 Frank Buss
@@ -60,18 +63,21 @@ interface management system."
 ;;; platform.
 (defsystem #:mcclim/looks
   :depends-on (#:clim
-               #-(or mcclim-gtkairo mcclim-beagle mcclim-ugly)
-                                #:mcclim-clx/pretty  #| adds truetype and pixie theme |#
-               #+mcclim-ugly    #:mcclim-clx         #| 'raw' clim-clx backend        |#
-               #+mcclim-gtkairo #:mcclim-gtkairo     #| Defunct now                   |#
-               #+mcclim-beagle  #:mcclim-beagle      #| OSX native (clozure only)     |#
+               #-(or mcclim-beagle mcclim-ugly)
+                                #:mcclim-clx/pretty  #| adds truetype        |#
+               #+mcclim-ugly    #:mcclim-clx         #| raw clim-clx backend |#
+               #+mcclim-beagle  #:mcclim-beagle      #| OSX native (clozure) |#
 
                  ;; null backend
                #:mcclim-null))
 
 (defsystem #:mcclim/extensions
   :depends-on (#:mcclim-bitmaps
-               #:conditional-commands))
+               #:conditional-commands
+               #:mcclim-layouts/tab
+               #:mcclim-bezier
+               #:mcclim-image
+               #:clim-pdf))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ;; The fact that CLIM itself is available is true when all is loaded.

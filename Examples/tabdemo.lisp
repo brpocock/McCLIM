@@ -25,15 +25,16 @@
    (default
        (vertically ()
 	 (with-tab-layout ('tab-page :name 'tabdemo-layout :height 200)
-           ("A" a)
+           ("A" a :drawing-options `(:text-style ,(make-text-style nil :bold nil)))
            ("B" b)
            ("C" c)
-           ("Special Page" special-page :presentation-type 'special-page))
+           ("Special Page" special-page :presentation-type 'special-page
+                           :drawing-options `(:text-style ,(make-text-style nil nil :small))))
 	 io
 	 pointer-doc))))
 
 (define-tabdemo-command (com-remove-tabdemo-page :name t)
-    ((page 'tab-page :prompt "Tab page" :gesture :delete))
+    ((page tab-page :prompt "Tab page" :gesture :delete))
   (remove-page page))
 
 (make-command-table 'tabdemo-pages-menu
@@ -73,10 +74,10 @@
 ;; FIND-PANE-NAMED.  Ignoring the symbol identity and case works
 ;; around that.
 (defun sane-find-pane-named (frame name)
-  (find name
-	(climi::frame-named-panes frame)
-	:key #'pane-name
-	:test #'string-equal))
+  (map-over-sheets #'(lambda (p)
+                       (when (string-equal name (pane-name p))
+                         (return-from sane-find-pane-named p)))
+                   (frame-panes frame)))
 
 (defun tabdemo-layout ()
   (sane-find-pane-named *application-frame* 'tabdemo-layout))
@@ -137,4 +138,7 @@
 (define-tabdemo-command (com-paint-page-green :name t)
     ()
   (with-enabled-tab-layout-page page
-    (setf (getf (tab-page-drawing-options page) :ink) +green+)))
+    (setf (getf (tab-page-drawing-options page) :ink)
+          +green+
+          (getf (tab-page-drawing-options page) :text-style)
+          (make-text-style nil nil :small))))

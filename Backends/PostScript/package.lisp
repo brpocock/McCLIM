@@ -21,7 +21,7 @@
 (in-package :cl-user)
 
 (defpackage #:clim-postscript
-  (:use #:clim #:clim-extensions #:clim-lisp)
+  (:use #:clim #:clim-extensions #:clim-lisp #:clim-postscript-font)
   (:export #:load-afm-file)
   (:import-from #:clim-internals
                 #:get-environment-variable

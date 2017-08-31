@@ -123,6 +123,12 @@ designator) inherits menu items."
 
 (defparameter *command-tables* (make-hash-table :test #'eq))
 
+(defparameter *command-parser-table* (make-hash-table)
+  "Mapping from command names to argument parsing functions.")
+
+(defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
+(defvar *numeric-argument-marker* '%numeric-argument-marker%)
+
 (define-condition command-table-error (simple-error)
   ((command-table-name :reader error-command-table-name
                        :initform nil
@@ -380,6 +386,7 @@ designator) inherits menu items."
 
 (defun remove-menu-item-from-command-table (command-table string
 					    &key (errorp t))
+  "Removes item from the `command-table'."
   (let ((table (find-command-table command-table))
 	(item (find-menu-item string command-table :errorp nil)))
     (with-slots (menu) table
@@ -436,7 +443,8 @@ designator) inherits menu items."
 				       string type value
 				       &rest args
 				       &key documentation (after :end)
-				       keystroke text-style (errorp t))
+                                         keystroke text-style (errorp t))
+  "Adds menu item to the command table."
   (declare (ignore documentation keystroke text-style))
   (let* ((table (find-command-table command-table))
 	 (old-item (find-menu-item string command-table :errorp nil)))
@@ -668,12 +676,6 @@ examine the type of the command menu item to see if it is
   (:documentation "A container for a command's parsing functions and
   data for unparsing"))
 
-(defparameter *command-parser-table* (make-hash-table)
-  "Mapping from command names to argument parsing functions.")
-
-(defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
-(defvar *numeric-argument-marker* '%numeric-argument-marker%)
-
 (defvar *command-name-delimiters* '(command-delimiter))
 
 (defvar *command-argument-delimiters* '(command-delimiter))
@@ -874,9 +876,7 @@ examine the type of the command menu item to see if it is
                  (unless (partial-command-p ,partial-command)
                    (return ,partial-command))))))))))
 
-;;; XXX What do to about :acceptably? Probably need to wait for Goatee "buffer
-;;; streams" so we can insert an accept-result-extent in the buffer for
-;;; unacceptable objects. -- moore 
+;;; XXX What do to about :acceptably? -- moore
 (defun make-unprocessor-fun (name required-args key-args)
   (with-gensyms (command command-args stream key key-arg-val seperator arg-tail)
     ;; Bind the argument variables because expressions in the
@@ -1123,30 +1123,48 @@ examine the type of the command menu item to see if it is
 (defmacro define-command (name-and-options args &body body)
   (unless (listp name-and-options)
     (setq name-and-options (list name-and-options)))
+
+  ;; Argument types shouldn't be evaluated. Unfortunately in McCLIM
+  ;; they are, and in all McCLIM applications up to day types are
+  ;; quoted. To preserve backward compatibility we honor this, but we
+  ;; don't evaluate types which are not quoted, but rather add the
+  ;; quotation ourself.
+  ;;
+  ;; Thanks to that we should achieve compatibility with other CLIMs
+  ;; without breaking already existing applications (unless they did
+  ;; some fancy computation in `define-command' macro which isn't
+  ;; conforming anyway).
+  (map () (lambda (arg)
+            ;; we need to sanitize against &key which is atom
+            (unless (atom arg)
+              (let ((type (second arg)))
+                (unless (and (listp type)
+                             (eql (car type) 'quote))
+                  (setf (second arg) `',type)))))
+       args)
+
   (destructuring-bind (func &rest options
 		       &key (provide-output-destination-keyword nil)
 		       &allow-other-keys)
       name-and-options
     (with-keywords-removed (options (:provide-output-destination-keyword))
       (if provide-output-destination-keyword
-	  (multiple-value-bind (required optional rest key key-supplied)
-	      (parse-lambda-list args)
-	    (declare (ignore required optional rest key))
-	    (let* ((destination-arg '(output-destination 'output-destination
-				      :default nil))
-		   (new-args (if key-supplied
-				 `(,@args ,destination-arg)
-				 `(,@args &key ,destination-arg))))
-	      (multiple-value-bind (decls new-body)
-		  (get-body-declarations body)
-		(with-gensyms (destination-continuation)
-		  `(%define-command (,func ,@options) ,new-args
-		     ,@decls
-		     (flet ((,destination-continuation ()
-			      ,@new-body))
-		       (declare (dynamic-extent #',destination-continuation))
-		       (invoke-with-standard-output #',destination-continuation
-						    output-destination)))))))
+          (let ((key-supplied (find '&key args)))
+            (let* ((destination-arg '(output-destination 'output-destination
+                                      :default nil))
+                   (new-args (if key-supplied
+                                 `(,@args ,destination-arg)
+                                 `(,@args &key ,destination-arg))))
+              (multiple-value-bind (decls new-body)
+                  (get-body-declarations body)
+                (with-gensyms (destination-continuation)
+                  `(%define-command (,func ,@options) ,new-args
+                     ,@decls
+                     (flet ((,destination-continuation ()
+                              ,@new-body))
+                       (declare (dynamic-extent #',destination-continuation))
+                       (invoke-with-standard-output #',destination-continuation
+                                                    output-destination)))))))
 	  `(%define-command (,func ,@options)
 			    ,args
 	     ,@body)))))
@@ -1367,7 +1385,7 @@ examine the type of the command menu item to see if it is
 (defmacro define-presentation-to-command-translator 
     (name (from-type command-name command-table &key
 	   (gesture :select)
-	   (tester 'default-translator-tester testerp)
+	   (tester 'default-translator-tester)
 	   (documentation nil documentationp)
 	   (pointer-documentation (command-name-from-symbol command-name))
 	   (menu t)
@@ -1388,8 +1406,7 @@ examine the type of the command menu item to see if it is
 		     :translator-class presentation-command-translator
 		     :command-name ',command-name)
        ,arglist
-       (let ((,command-args (progn
-			      ,@body)))
+       (let ((,command-args (let () ,@body)))
 	 (values (cons ',command-name ,command-args)
 		 '(command :command-table ,command-table)
 		 '(:echo ,echo))))))

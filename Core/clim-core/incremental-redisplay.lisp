@@ -332,6 +332,8 @@ spatially organized data structure.
        (or (not y-supplied-p)
 	   (coordinate= (slot-value state 'cursor-y) cursor-y))))
 
+(defgeneric set-medium-cursor-position (state stream))
+
 (defmethod set-medium-cursor-position
     ((state updating-stream-state) (stream updating-output-stream-mixin))
   (setf (stream-cursor-position stream)
@@ -508,10 +510,11 @@ updating-output-parent above this one in the tree.")
     (map-over-updating-output
      #'(lambda (r)
          (let ((sub-record (sub-record r)))
-           (setf (old-children r) sub-record)
-           (setf (output-record-dirty r) :updating)
-           (setf (rectangle-edges* (old-bounds r))
-                 (rectangle-edges* sub-record))))
+           (when sub-record
+             (setf (old-children r) sub-record)
+             (setf (output-record-dirty r) :updating)
+             (setf (rectangle-edges* (old-bounds r))
+                   (rectangle-edges* sub-record)))))
      record
      nil)
     (force-output stream)

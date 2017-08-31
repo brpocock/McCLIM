@@ -23,10 +23,20 @@
 ;;; Package definitions for ESA.
 
 (defpackage :esa-utils
-  (:use :clim-lisp :clim-mop :clim)
+  (:use :clim-lisp :c2mop :clim)
   (:shadowing-import-from :clim-lisp #:describe-object)
+  (:shadowing-import-from :c2mop
+                          #:defclass
+                          #:defgeneric
+                          #:defmethod
+                          #:standard-generic-function
+                          #:standard-method
+                          #:standard-class)
+  (:import-from #:alexandria
+		#:once-only
+		#:with-gensyms)
   (:export #:with-gensyms
-           #:once-only
+	   #:once-only
            #:unlisted
            #:fully-unlisted
            #:listed
@@ -91,6 +101,7 @@
            #:find-applicable-command-table
            #:esa-command-parser
            #:esa-partial-command-parser
+           #:esa-command-table
 
            #:gesture-matches-gesture-name-p #:meta-digit
            #:proper-gesture-p
@@ -135,16 +146,3 @@
            #:com-find-file #:com-find-file-read-only
            #:com-read-only #:com-set-visited-file-name
            #:com-save-buffer #:com-write-buffer))
-
-#-(or mcclim building-mcclim)
-(defpackage :clim-extensions
-  (:use :clim-lisp :clim)
-  (:export
-   #:+blue-violet+
-   #:+dark-blue+
-   #:+dark-green+
-   #:+dark-violet+
-   #:+gray50+
-   #:+gray85+
-   #:+maroon+
-   #:+purple+))

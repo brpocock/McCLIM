@@ -77,18 +77,33 @@
 			"[Use the middle and right mouse button to set control points]"
 			0
 			20))
-	  (let* ((cp-x1 (or cp-x1 x))
-		 (cp-y1 (or cp-y1 y1))
-		 (cp-x2 (or cp-x2 x1))
-		 (cp-y2 (or cp-y2 y))
-		 (design (climi::make-bezier-thing*
-			  'climi::bezier-area
-			  (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1))))
-            (unless (or (= x cp-x1 x1 cp-x2)
-                        (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
-              (climi::draw-bezier-design* pane design)
-              (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
-              (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+))))))))
+          (if fill-mode
+              (let* ((cp-x1 (or cp-x1 x))
+                     (cp-y1 (or cp-y1 y1))
+                     (cp-x2 (or cp-x2 x1))
+                     (cp-y2 (or cp-y2 y)))
+                (unless (or (= x cp-x1 x1 cp-x2)
+                            (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
+                  (let ((design (mcclim-bezier::make-bezier-area*
+                                 (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1 x1 y1 x y x y))))
+                    (mcclim-bezier:draw-bezier-design* pane design
+                                                       :ink current-color
+                                                       :line-style line-style))
+                  (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
+                  (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+)))
+              (let* ((cp-x1 (or cp-x1 x))
+                     (cp-y1 (or cp-y1 y1))
+                     (cp-x2 (or cp-x2 x1))
+                     (cp-y2 (or cp-y2 y))
+                     (design (mcclim-bezier::make-bezier-curve*
+                              (list x y cp-x1 cp-y1 cp-x2 cp-y2 x1 y1))))
+                (unless (or (= x cp-x1 x1 cp-x2)
+                            (= y cp-y1 y1 cp-y2)) ; Don't draw null beziers.
+                  (mcclim-bezier:draw-bezier-design* pane design
+                                                     :ink current-color
+                                                     :line-style line-style)
+                  (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
+                  (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+)))))))))
 
 (defun signum-1 (value)
   (if (zerop value)
@@ -115,7 +130,7 @@
               (tracking-pointer (pane)
                 (:pointer-motion (&key window x y)
                                  (declare (ignore window))
-                                 (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)~%"
+                                 (set-status-line (format nil "~:(~A~) from (~D,~D) to (~D,~D)"
                                                           (slot-value *application-frame*
                                                                       'drawing-mode)
                                                           (round x1) (round y1)
@@ -327,15 +342,19 @@
     (blank-area com-add-figure clim-fig
                 :gesture :select ; XXX
                 :echo nil
-                :tester ((window) (typep window 'canvas-pane)))
-  (x y)
+                :tester ((object window)
+                         (declare (ignore object))
+                         (typep window 'canvas-pane)))
+    (object x y)
   (list x y))
 
 (define-presentation-to-command-translator move-figure
     (figure com-move-figure clim-fig
             :gesture :menu ; XXX
             :echo nil)
-  (presentation x y)
+    (object presentation x y)
+  ;; xxx: inv-2016-08-22
+  ;; (declare (ignore object))
   (list presentation x y))
 
 (defmethod generate-panes :after (frame-manager (frame clim-fig))
@@ -380,11 +399,11 @@
                 (clim-fig-redo-list *application-frame*)))
   (window-clear *standard-output*))
 
-(define-clim-fig-command (com-add-figure :name nil) ((x 'real) (y 'real))
+(define-clim-fig-command (com-add-figure :name nil) ((x real) (y real))
   (handle-draw-object (find-pane-named *application-frame* 'canvas) x y))
 
 (define-clim-fig-command (com-move-figure :name nil)
-    ((figure 'figure) (x 'real) (y 'real))
+    ((figure figure) (x real) (y real))
   (handle-move-object (find-pane-named *application-frame* 'canvas)
                       figure x y))
 

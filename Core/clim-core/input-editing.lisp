@@ -27,10 +27,6 @@
 
 (in-package :clim-internals)
 
-(defvar *use-goatee* nil
-  "If true, use the Goatee editing component instead of Drei. The
-Goatee component is faster and more mature than Drei.")
-
 (defvar *activation-gestures* nil
   "The set of currently active activation gestures. The global
 value of this must be NIL. The exact format of
@@ -282,7 +278,7 @@ defaulting to T for `*standard-output*'."
 (defmacro with-input-editing ((&optional (stream t)
 			       &rest args
 			       &key input-sensitizer (initial-contents "")
-			       (class ''standard-input-editing-stream class-provided-p))
+			       (class ''standard-input-editing-stream))
 			      &body body)
   "Establishes a context in which the user can edit the input
 typed in on the interactive stream `stream'. `Body' is then
@@ -315,10 +311,7 @@ buffer using `presentation-replace-input'."
     `(invoke-with-input-editing ,stream
                                 #'(lambda (,stream) ,@body)
                                 ,input-sensitizer ,initial-contents
-                                ,(if class-provided-p
-                                     class
-                                     `(if *use-goatee* 'goatee-input-editing-stream
-                                          ,class))
+                                ,class
                                 ,@args)))
 
 (defmacro with-input-position ((stream) &body body)
@@ -739,12 +732,14 @@ stream. Output will be done to its typeout."
                      (print-possibilities possibilities possibility-printer stream)
                      (redraw-input-buffer stream)
                      (let ((possibility
-                            (handler-case
-                                (with-input-context (`(completion ,possibilities) :override nil)
-                                    (object type event)
-                                    (prog1 nil (read-gesture :stream stream :peek-p t))
-                                  (t object))
-                              (abort-gesture () nil))))
+                            (unwind-protect 
+                                 (handler-case
+                                     (with-input-context (`(completion ,possibilities) :override nil)
+                                         (object type event)
+                                         (prog1 nil (read-gesture :stream stream :peek-p t))
+                                       (t object))
+                                   (abort-gesture () nil))
+                              (clear-typeout stream))))
                        (if possibility
                            (setf (values input success object nmatches)
                                  (values (first possibility) t (second possibility) 1))

@@ -1,41 +1,15 @@
 ;;; -*- Mode: Lisp; Package: ESA-UTILS -*-
-
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-;;;  (c) copyright 2014 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  Miscellaneous utilities used in ESA.
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;;  (c) copyright 2006 by Troels Henriksen (athas@sigkill.dk)
+;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
+;;;
+;;; See toplevel file 'Copyright' for the copyright details.
+;;;
 
-;;; Miscellaneous utilities used in ESA.
 
 (in-package :esa-utils)
-
-;;; Cribbed from Paul Graham
-(defmacro with-gensyms (syms &body body)
-  `(let ,(mapcar #'(lambda (s) `(,s (gensym))) syms)
-     ,@body))
-
-;;; Cribbed from PCL by Seibel
-(defmacro once-only ((&rest names) &body body)
-  (let ((gensyms (loop for n in names collect (gensym))))
-    `(let (,@(loop for g in gensyms collect `(,g (gensym))))
-       `(let (,,@(loop for g in gensyms for n in names collect ``(,,g ,,n)))
-          ,(let (,@(loop for n in names for g in gensyms collect `(,n ,g)))
-                ,@body)))))
 
 (defun unlisted (obj &optional (fn #'first))
   (if (listp obj)
@@ -481,7 +455,7 @@ list of initargs"
   (:documentation "A metaclass for defining classes supporting
 changing of modes."))
 
-(defmethod validate-superclass ((c1 modual-class) (c2 standard-class))
+(defmethod c2mop:validate-superclass ((c1 modual-class) (c2 standard-class))
   t)
 
 (defmethod compute-slots ((c modual-class))

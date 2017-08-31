@@ -1,4 +1,4 @@
-1;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
 ;;;  (c) copyright 2000, 2014 by 
 ;;;           Robert Strandh (robert.strandh@gmail.com)
@@ -170,6 +170,7 @@ account, and create a list of menu buttons."
 	    (setf frame-manager manager
 		  submenu-frame (make-menu-frame raised :left x :top y))
 	    (adopt-frame manager submenu-frame)
+	    (enable-frame submenu-frame)
 	    (with-sheet-medium (medium raised)
 	      (medium-force-output medium))))))))
 
@@ -237,7 +238,7 @@ account, and create a list of menu buttons."
 
 ;;; menu-divider-leaf-pane
 
-(defclass menu-divider-leaf-pane (standard-gadget)
+(defclass menu-divider-leaf-pane (basic-gadget)
   ((label :initform nil :initarg :label)))
 
 (defparameter *labelled-divider-text-style* (make-text-style :sans-serif :roman :small))
@@ -363,11 +364,8 @@ account, and create a list of menu buttons."
   ((items :initform nil)
    (armed :initform nil)))
 
-(defmethod initialize-instance :after ((pane menu-bar)
-				       &rest args
-				       &key
-				       &allow-other-keys)
-  (declare (ignore args))
+(defmethod (setf %pane-contents) :after (contents (pane menu-bar))
+  (declare (ignore contents))
   (setf (slot-value pane 'items) (copy-list (sheet-children pane)))
   (loop for child in (menu-children pane)
 	do (setf (gadget-client child) pane)))
@@ -390,6 +388,18 @@ account, and create a list of menu buttons."
 (defmethod disarm-menu ((object menu-bar))
   (setf (slot-value object 'armed) nil))
 
+(defun %make-menu-contents (command-table)
+  (with-slots (menu) (find-command-table command-table)
+    (append
+     (loop for item in menu
+	collect
+	  (make-menu-button-from-menu-item
+	   item nil
+	   :bottomp t
+	   :vertical nil
+	   :command-table command-table))
+     (list +fill+))))
+
 (defun make-menu-bar (command-table 
 		      &key width height
 		           (max-width +fill+) max-height
@@ -401,16 +411,13 @@ account, and create a list of menu buttons."
 		 :width width :height height
 		 :max-width max-width :max-height max-height
 		 :min-width min-width :min-height min-height
-		 :contents
-		 (append
-		  (loop for item in menu
-		      collect 
-                        (make-menu-button-from-menu-item
-			 item nil
-			 :bottomp t
-			 :vertical nil
-			 :command-table command-table))
-		  (list +fill+)))))
+		 :contents (%make-menu-contents command-table))))
+
+(defun update-menu-bar (menu-bar-pane command-table)
+  (when command-table
+    (setf (%pane-contents menu-bar-pane)
+	  (%make-menu-contents command-table)))
+  (change-space-requirements menu-bar-pane))
 
 (defmethod handle-repaint ((pane menu-bar) region)
   (declare (ignore region))

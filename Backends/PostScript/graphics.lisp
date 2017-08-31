@@ -39,6 +39,11 @@
 
 (in-package :clim-postscript)
 
+;;;
+(defvar *transformation* nil
+  "Native transformation")
+
+
 ;;; Postscript output utilities
 (defun write-number (stream number)
   (format stream "~,3F " (coerce number 'single-float)))
@@ -67,6 +72,48 @@
 (defvar *procedures* (make-hash-table))
 
 (defvar *extra-entries* 0)
+
+(defun dump-reencode (sink)
+  (format sink "
+% base-font-name new-font-name encoding-vector ReEncode -->
+/ReEncode
+{
+  5 dict 
+  begin
+    /newencoding exch def
+    /newfontname exch def
+    /basefontname exch def
+
+    /basefontdict basefontname findfont def
+    /newfont basefontdict maxlength dict def
+    
+    basefontdict
+    { 
+      exch dup dup /FID ne exch /Encoding ne and 
+      { exch newfont 3 1 roll put }
+      { pop pop }
+      ifelse
+    } forall
+
+    newfont /FontName newfontname put
+    newfont /Encoding newencoding put
+    newfontname newfont definefont pop
+  end
+} def
+
+/R { 2 1 roll 0 rmoveto show } def
+
+/ISOmapping 256 array def
+")
+  (format sink "ISOmapping~%")
+  (dotimes (i 256)
+    (format sink "  dup ~3D /~A put~%" i (or (aref *iso-latin-1-symbolic-names* i) ".notdef")))
+  (format sink "pop~%~%")
+  
+  (dolist (k '("Times-Roman" "Times-Italic" "Times-Bold" "Times-BoldItalic"
+	       "Helvetica" "Helvetica-Oblique" "Helvetica-Bold" "Helvetica-BoldOblique"
+	       "Courier" "Courier-Oblique" "Courier-Bold" "Courier-BoldOblique"))
+    (format sink "/~A /~A-iso ISOmapping ReEncode~%" k k)))
 
 (defun write-postscript-dictionary (stream)
   ;;; FIXME: DSC
@@ -165,9 +212,6 @@ setmatrix")
       (format stream "pe~%"))))
 
 ;;;;
-(defvar *transformation* nil
-  "Native transformation")
-
 ;;; Postscript output utilities
 (defmacro with-graphics-state ((stream) &body body)
   `(invoke-with-graphics-state ,stream
@@ -463,11 +507,20 @@ setmatrix")
 (defun medium-font (medium)
   (text-style-mapping (port medium) (medium-merged-text-style medium)))
 
+(defun %font-name-postscript-name (font-name)
+  (etypecase font-name
+    (clim-postscript-font:postscript-device-font-name
+     (let ((font-info (clim-postscript-font:get-font-info font-name)))
+       (unless font-info
+         (error "Unknown font: ~S" font-info))
+       (clim-postscript-font:font-info-name font-info)))
+    (cons (concatenate 'string (car font-name) "-iso"))))
+
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :text-style)))
   (let* ((font-name (medium-font medium))
          (font (%font-name-postscript-name font-name))
-         (size (%font-name-size font-name)))
+         (size (clim-postscript-font:font-name-size font-name)))
     (pushnew font (slot-value (medium-sheet medium) 'document-fonts)
              :test #'string=)
     (format stream "/~A findfont ~D scalefont setfont~%"
@@ -529,9 +582,9 @@ setmatrix")
         (multiple-value-bind (total-width total-height
                               final-x final-y baseline)
             (let* ((font-name (medium-font medium))
-                   (font (%font-name-metrics-key font-name))
-                   (size (%font-name-size font-name)))
-              (text-size-in-font font size string 0 nil))
+                   (font (clim-postscript-font:font-name-metrics-key font-name))
+                   (size (clim-postscript-font:font-name-size font-name)))
+              (clim-postscript-font:text-size-in-font font size string 0 nil))
           (declare (ignore final-x final-y))
           ;; Only one line?
           (setq x (ecase align-x
@@ -548,46 +601,3 @@ setmatrix")
         (format file-stream "(~A) show~%" (postscript-escape-string string))))))
 
 
-;;; Bezier support
-
-(defun %draw-bezier-area (stream area)
-  (format stream "newpath~%")
-  (let ((segments (climi::segments area)))
-    (let ((p0 (slot-value (car segments) 'climi::p0)))
-      (write-coordinates stream (point-x p0) (point-y p0))
-      (format stream "moveto~%"))
-    (loop for segment in segments
-          do (with-slots (climi::p1 climi::p2 climi::p3) segment
-               (write-coordinates stream (point-x climi::p1) (point-y climi::p1))
-               (write-coordinates stream (point-x climi::p2) (point-y climi::p2))
-               (write-coordinates stream (point-x climi::p3) (point-y climi::p3))
-               (format stream "curveto~%")))
-    (format stream "fill~%")))
-
-(defmethod climi::medium-draw-bezier-design*
-    ((medium postscript-medium) (design climi::bezier-area))
-  (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
-    (%draw-bezier-area stream design)))
-
-(defmethod climi::medium-draw-bezier-design*
-    ((medium postscript-medium) (design climi::bezier-union))
-  (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
-    (let ((tr (climi::transformation design)))
-      (dolist (area (climi::areas design))
-        (%draw-bezier-area stream (transform-region tr area))))))
-
-(defmethod climi::medium-draw-bezier-design*
-    ((medium postscript-medium) (design climi::bezier-difference))
-  (let ((stream (postscript-medium-file-stream medium))
-        (*transformation* (sheet-native-transformation (medium-sheet medium))))
-    (postscript-actualize-graphics-state stream medium :color)
-    (dolist (area (climi::positive-areas design))
-      (%draw-bezier-area stream area))
-    (with-drawing-options (medium :ink +background-ink+)
-      (postscript-actualize-graphics-state stream medium :color)
-      (dolist (area (climi::negative-areas design))
-        (%draw-bezier-area stream area)))))

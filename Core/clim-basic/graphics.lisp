@@ -181,8 +181,8 @@
 	      (declare (ignore ,cont-arg))
 	      ,@body))
        #-clisp (declare (dynamic-extent #',gcontinuation))
-       (apply #'invoke-with-drawing-options
-	      ,medium #',gcontinuation (list ,@drawing-options)))))
+       (invoke-with-drawing-options
+        ,medium #',gcontinuation ,@drawing-options))))
 
 (defmethod invoke-with-drawing-options ((medium medium) continuation
                                         &rest drawing-options
@@ -560,11 +560,11 @@ position for the character."
 		   &key ink clipping-region transformation
 		     line-style line-thickness
 		     line-unit line-dashes line-cap-shape
-		     (to-head t) from-head (head-length 10) (head-width 5))
+		     (to-head t) from-head (head-length 10) (head-width 5) angle)
   (declare (ignore ink clipping-region transformation
 		   line-style line-thickness
 		   line-unit line-dashes line-cap-shape
-                   to-head from-head head-length head-width))
+                   to-head from-head head-length head-width angle))
   (multiple-value-bind (x1 y1) (point-position point-1)
     (multiple-value-bind (x2 y2) (point-position point-2)
       (apply #'draw-arrow* sheet x1 y1 x2 y2 args))))
@@ -574,14 +574,14 @@ position for the character."
 		    &key ink clipping-region transformation
 		      line-style line-thickness
 		      line-unit line-dashes line-cap-shape
-		      (to-head t) from-head (head-length 10) (head-width 5))
+                      (to-head t) from-head (head-length 10) (head-width 5) angle)
   (declare (ignore ink clipping-region transformation
 		   line-style line-thickness
 		   line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
     (with-translation (sheet x2 y2)
-      (with-rotation (sheet (atan* (- x1 x2)
-                                   (- y1 y2)))
+      (with-rotation (sheet (or angle (atan* (- x1 x2)
+                                             (- y1 y2))))
         (let* ((end 0.0)
                (start (sqrt (+ (expt (- x2 x1) 2)
 			       (expt (- y2 y1) 2))))
@@ -762,7 +762,8 @@ position for the character."
   (let* ((msheet (sheet-mirrored-ancestor sheet))
 	 (medium (sheet-medium sheet))
 	 (sheet-transform (sheet-native-transformation sheet))
-	 (medium-transform (medium-transformation (sheet-medium sheet)))
+	 (msheet-transform (sheet-native-transformation msheet))
+	 (medium-transform (medium-transformation medium))
 	 (world-transform (compose-transformations
 			   sheet-transform
 			   medium-transform)))
@@ -778,58 +779,48 @@ position for the character."
 	       (pixmap-y2 (ceiling sheet-y2))
 	       (pixmap-width (- pixmap-x2 pixmap-x1))
 	       (pixmap-height (- pixmap-y2 pixmap-y1))
-	       (current-sheet-region (sheet-region msheet))
-	       (sheet-native (compose-transformation-with-translation
-			      sheet-transform
-			      (- pixmap-x1)
-			      (- pixmap-y1)))
-	       (pixmap (allocate-pixmap msheet pixmap-width pixmap-height))
-	       )
+	       (msheet-native (compose-transformation-with-translation
+			       msheet-transform
+			       (- pixmap-x1)
+			       (- pixmap-y1)))
+	       (pixmap (allocate-pixmap msheet pixmap-width pixmap-height)))
 	  (unless pixmap
 	    (error "Couldn't allocate pixmap")) 
 	  (multiple-value-bind (user-pixmap-x1 user-pixmap-y1)
 	      (untransform-position world-transform pixmap-x1 pixmap-y1)
 	    (multiple-value-bind (user-pixmap-x2 user-pixmap-y2)
 		(untransform-position world-transform pixmap-x2 pixmap-y2)
-	      (flet ((set-native (transform region sheet)
-		       (%%set-sheet-native-transformation transform sheet)
-		       (setf (slot-value sheet 'region) region)
-		       (invalidate-cached-regions sheet)
-		       (invalidate-cached-transformations sheet)))
-		;; Assume that the scaling for the sheet-native
-		;; transformation for the pixmap will be the same as that of
-		;; the mirror .
-		(unwind-protect
-		     (letf (((sheet-parent msheet) nil)
-			    ((sheet-direct-mirror msheet)
-			     (pixmap-mirror pixmap)))
-		       (unwind-protect
-			    (let ((pixmap-region
-				   (make-bounding-rectangle user-pixmap-x1
-							    user-pixmap-y1
-							    user-pixmap-x2
-							    user-pixmap-y2)))
-			      (set-native sheet-native pixmap-region  msheet)
-			      ;(break)
-			      (with-drawing-options
-				  (medium :ink (medium-background medium))
-				
-				(medium-draw-rectangle* medium
-							user-pixmap-x1
-							user-pixmap-y1
-							user-pixmap-x2
-							user-pixmap-y2
-							t))
-			      (funcall continuation sheet
-				       user-pixmap-x1 user-pixmap-y1
-				       user-pixmap-x2 user-pixmap-y2))
-			 (set-native sheet-transform
-				     current-sheet-region
-				     msheet)))
-		  (copy-from-pixmap pixmap 0 0
-				    pixmap-width pixmap-height msheet
-				    pixmap-x1 pixmap-y1)
-		  (deallocate-pixmap pixmap))))))))))
+	      (multiple-value-bind (msheet-pixmap-x1 msheet-pixmap-y1)
+		  (untransform-position msheet-transform pixmap-x1 pixmap-y1)
+		(multiple-value-bind (msheet-pixmap-x2 msheet-pixmap-y2)
+		    (untransform-position msheet-transform pixmap-x2 pixmap-y2)
+		  ;; Assume that the scaling for the sheet-native
+		  ;; transformation for the pixmap will be the same as that of
+		  ;; the mirror .
+		  (unwind-protect
+		       (let ((pixmap-region
+			      (region-intersection
+			       (sheet-native-region sheet)
+			       (make-bounding-rectangle msheet-pixmap-x1
+							msheet-pixmap-y1
+							msheet-pixmap-x2
+							msheet-pixmap-y2))))
+			 (with-temp-mirror%%% (msheet (pixmap-mirror pixmap) msheet-native pixmap-region)
+			   (with-drawing-options
+			       (medium :ink (medium-background medium))
+			     (medium-draw-rectangle* medium
+						     user-pixmap-x1
+						     user-pixmap-y1
+						     user-pixmap-x2
+						     user-pixmap-y2
+						     t))
+			   (funcall continuation sheet
+				    user-pixmap-x1 user-pixmap-y1
+				    user-pixmap-x2 user-pixmap-y2)))
+		    (copy-from-pixmap pixmap 0 0
+				      pixmap-width pixmap-height sheet
+				      user-pixmap-x1 user-pixmap-y1)
+		    (deallocate-pixmap pixmap)))))))))))
 
 (defmacro with-double-buffering (((sheet &rest bounds-args)
 				  (&rest pixmap-args))
@@ -893,22 +884,6 @@ position for the character."
 			       align-x align-y
 			       toward-x toward-y transform-glyphs))
 
-;;; Some image junk...
-
-(defmethod medium-free-image-design ((sheet sheet-with-medium-mixin) design)
-  (medium-free-image-design (sheet-medium sheet) design))
-
-(defmethod medium-draw-image-design* :before (current-medium design x y)
-  (with-slots (medium medium-data) design
-    (unless (eq medium current-medium)
-      (when medium
-	(medium-free-image-design medium design))
-      (setf medium current-medium)
-      (setf medium-data nil))))
-
-(defmethod medium-draw-image-design*
-    ((medium sheet-with-medium-mixin) design x y)
-  (medium-draw-image-design* (sheet-medium medium) design x y))
 
 ;;;;
 ;;;; DRAW-DESIGN
@@ -1147,73 +1122,3 @@ position for the character."
                                   :radius-top  :radius-bottom))
      args)))
 
-;;; Bitmap images
-;;;
-;;; Based on CLIM 2.2, with an extension permitting the definition of
-;;; new image formats by the user.
-
-(defvar *bitmap-file-readers* (make-hash-table :test 'equalp)
-  "A hash table mapping keyword symbols naming bitmap image
-formats to a function that can read an image of that format. The
-functions will be called with one argument, the pathname of the
-file to be read. The functions should return two values as per
-`read-bitmap-file'.")
-
-(defmacro define-bitmap-file-reader (bitmap-format (&rest args) &body body)
-  "Define a method for reading bitmap images of format
-BITMAP-FORMAT that will be used by `read-bitmap-file' and
-MAKE-PATTERN-FROM-BITMAP-FILE. BODY should return two values as
-per `read-bitmap-file'."
-  `(setf (gethash ,bitmap-format *bitmap-file-readers*)
-         #'(lambda (,@args)
-             ,@body)))
-
-(defun bitmap-format-supported-p (format)
-  "Return true if FORMAT is supported by `read-bitmap-file'."
-  (not (null (gethash format *bitmap-file-readers*))))
-
-(defun read-bitmap-file (pathname &key (format :bitmap) (port (find-port)))
-  "Read a bitmap file named by `pathname'. `Port' specifies the
-port that the bitmap is to be used on. `Format' is a keyword
-symbol naming any defined bitmap file format defined by
-`clim-extensions:define-bitmap-file-reader'. Two values are
-returned: a two-dimensional array of pixel values and an array of
-either colors or color names. If the second value is non-NIL, the
-pixel values are assumed to be indexes into this
-array. Otherwise, the pixel values are taken to be RGB values
-encoded in 32 bit unsigned integers, with the three most
-significant octets being the values R, G and B, in order."
-  (declare (ignore port)) ; XXX?
-  (funcall (or (gethash format *bitmap-file-readers*)
-               #'opticl-read-bitmap-file)
-           pathname))
-
-(defun make-pattern-from-bitmap-file (pathname &key designs
-                                      (format :bitmap) (port (find-port)))
-  "Read a bitmap file named by `pathname'. `Port' specifies the
-port that the bitmap is to be used on. `Format' is a keyword
-symbol naming any defined bitmap file format defined by
-`clim-extensions:define-bitmap-file-reader'. Two values are
-returned: a two-dimensional array of pixel values and an array of
-either colors or color names. If the second value is non-NIL, the
-pixel values are assumed to be indexes into this
-array. Otherwise, the pixel values are taken to be RGB values
-encoded in 32 bit unsigned integers, with the three most
-significant octets being the values R, G and B, in order."
-  (multiple-value-bind (res read-designs)
-      (read-bitmap-file pathname :format format :port port)
-    (if read-designs
-        (make-pattern res (or designs read-designs))
-        (make-instance 'rgb-pattern :image (make-instance 'rgb-image
-                                            :width (array-dimension res 1)
-                                            :height (array-dimension res 0)
-                                            :data res)))))
-
-(define-bitmap-file-reader :xpm (pathname)
-  (xpm-parse-file pathname))
-
-(define-bitmap-file-reader :pixmap (pathname)
-  (read-bitmap-file pathname :format :xpm))
-
-(define-bitmap-file-reader :pixmap-3 (pathname)
-  (read-bitmap-file pathname :format :xpm))

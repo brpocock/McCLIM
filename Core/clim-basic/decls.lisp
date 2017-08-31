@@ -82,7 +82,9 @@
 ;;;; Early special variables
 
 (defvar *application-frame* nil)
+(defvar *pointer-documentation-output* nil)
 
+
 ;;; 3.2.1.1 The Point Protocol
 
 (defgeneric point-x (point))
@@ -123,6 +125,7 @@
 (defgeneric ellipse-start-angle (elliptical-object))
 (defgeneric ellipse-end-angle (elliptical-object))
 
+
 ;;; 4.1.1 The Bounding Rectangle Protocol
 
 (defgeneric bounding-rectangle* (region))
@@ -139,6 +142,7 @@
 (defgeneric bounding-rectangle-height (region))
 (defgeneric bounding-rectangle-size (region))
 
+
 ;;; 5.3.1 Transformation Predicates
 
 (defgeneric transformation-equal (transformation1 transformation2))
@@ -173,6 +177,7 @@
 (defgeneric transform-rectangle* (transformation x1 y1 x2 y2))
 (defgeneric untransform-rectangle* (transformation x1 y1 x2 y2))
 
+
 ;;; 7.2.1 Sheet Relationship Functions
 
 (defgeneric sheet-parent (sheet))
@@ -219,6 +224,7 @@
 ;; sheet-y-inverting-transformation-mixin [class]
 ;; sheet-transformation-mixin [class]
 
+
 ;;;; 8.1
 (defgeneric process-next-event (port &key wait-function timeout))
 
@@ -288,6 +294,7 @@
 (defgeneric handle-repaint (sheet region))
 (defgeneric repaint-sheet (sheet region))
 
+
 ;;;; 9 Ports, Grafts, and Mirrored Sheets
 
 ;; (defgeneric portp (object))
@@ -357,6 +364,7 @@
 			       align-x align-y
 			       toward-x toward-y transform-glyphs))
 
+
 ;;; 10.1 Medium Components
 ;;;
 ;;; For reasons that are beyond me, many of the medium component
@@ -376,6 +384,7 @@
 
 (defgeneric invoke-with-first-quadrant-coordinates (medium continuation x y))
 
+
 ;;; 11.1.1 Text Style Protocol and Text Style Suboptions
 
 (defgeneric text-style-components (text-style))
@@ -394,6 +403,7 @@
 
 (defgeneric invoke-with-text-style (medium continuation text-style))
 
+
 ;;; 12.7.3 Other Medium-specific Output Functions
 
 (defgeneric medium-finish-output (medium))
@@ -401,7 +411,8 @@
 (defgeneric medium-clear-area (medium left top right bottom))
 (defgeneric medium-beep (medium))
 
-;;;; 14.2
+
+;;; 14.2
 
 (defgeneric pattern-width (pattern)
   (:documentation "Return the width of `pattern'."))
@@ -423,6 +434,7 @@
 	    line-unit line-dashes line-joint-shape line-cap-shape text-style
 	    text-family text-face text-size))
 
+
 ;;; 15.3 The Text Cursor [complete]
 
 ;;; 15.3.1 Text Cursor Protocol [complete]
@@ -483,6 +495,7 @@
 (defgeneric medium-buffering-output-p (medium))
 (defgeneric (setf medium-buffering-output-p) (buffer-p medium))
 
+
 ;;; 16.2.1. The Basic Output Record Protocol
 (defgeneric output-record-position (record)
   (:documentation
@@ -544,11 +557,15 @@ Only those records that overlap REGION are displayed."))
 
 (defgeneric output-record-children (record))
 
-(defgeneric add-output-record (child record))
+(defgeneric add-output-record (child record)
+  (:documentation "Sets RECORD to be the parent of CHILD."))
 
-(defgeneric delete-output-record (child record &optional errorp))
+(defgeneric delete-output-record (child record &optional errorp)
+  (:documentation "If CHILD is a child of RECORD, sets the parent of
+CHILD to NIL."))
 
-(defgeneric clear-output-record (record))
+(defgeneric clear-output-record (record)
+  (:documentation "Sets the parent of all children of RECORD to NIL."))
 
 (defgeneric output-record-count (record))
 
@@ -632,7 +649,8 @@ unspecified. "))
 ;;; in the Allegro CLIM 2 User Guide and appears to exist in other 'classic'
 ;;; CLIM implementations. I'm assuming it's an omission from the spec.
 (defgeneric invoke-with-new-output-record
-    (stream continuation record-type constructor &key &allow-other-keys))
+    (stream continuation record-type constructor &key &allow-other-keys)
+  (:documentation "Same as in CLIM 2.2 (missing CONSTRUCTOR added)."))
 
 ;;; with-output-to-output-record (stream &optional record-type record &rest initargs)) &body body [Macro]
 (defgeneric invoke-with-output-to-output-record 
@@ -641,11 +659,13 @@ unspecified. "))
 
 (defgeneric make-design-from-output-record (record))
 
+
 ;;;; 21.2
 (defgeneric invoke-updating-output
     (stream continuation record-type unique-id id-test cache-value cache-test
 	    &key fixed-position all-new parent-cache))
 
+
 ;;; 22.2.1 The Extended Stream Input Protocol
 
 (defgeneric stream-input-buffer (stream))
@@ -665,6 +685,7 @@ unspecified. "))
 (defgeneric accelerator-gesture-event (condition))
 (defgeneric accelerator-gesture-numeric-argument (condition))
 
+
 ;;; 23.5 Context-dependent (Typed) Input
 
 (defgeneric stream-accept 
@@ -675,6 +696,7 @@ unspecified. "))
      delimiter-gestures additional-delimiter-gestures))
 (defgeneric prompt-for-accept (stream type view &rest accept-args &key))
 
+
 ;;; 24.1 The Input Editor
 
 (defgeneric input-editor-format (stream format-string &rest args)
@@ -808,12 +830,14 @@ form, it may be inserted as a special \"accept result\" that is
 considered a single gesture. These accept result objects have no
 standardised form."))
 
+
 ;;; 27.3 Command Menus
 
-(defgeneric display-command-table-menu (command-table stream &key max-width
-                                                      max-height n-rows n-columns x-spacing
-                                                      y-spacing initial-spacing row-wise
-                                                      cell-align-x cell-align-y move-cursor)
+(defgeneric display-command-table-menu (command-table stream
+                                        &key max-width max-height
+                                          n-rows n-columns x-spacing
+                                          y-spacing initial-spacing row-wise
+                                          cell-align-x cell-align-y move-cursor)
   (:documentation "Display a menu of the commands accessible in
 `command-table' to `stream'.
 
@@ -822,6 +846,7 @@ standardised form."))
 `cell-align-y', and `move-cursor' are as for
 `formatting-item-list'."))
 
+
 ;;; 28.2 Specifying the Panes of a Frame
 
 (defgeneric destroy-frame (frame))
@@ -835,7 +860,15 @@ standardised form."))
 (defgeneric (setf frame-pretty-name) (name frame))
 (defgeneric frame-command-table (frame))
 (defgeneric (setf frame-command-table) (command-table frame))
-(defgeneric frame-standard-output (frame))
+
+(defgeneric frame-standard-output (frame)
+  (:documentation "Returns the stream that will be used for
+`*standard-output*' for the frame `frame'. The default method (on
+`standard-application-frame') returns the first named pane of type
+`application-pane' that is visible in the current layout; if there is
+no such pane, it returns the first pane of type `interactor-pane' that
+is exposed in the current layout."))
+
 (defgeneric frame-standard-input (frame))
 (defgeneric frame-query-io (frame))
 (defgeneric frame-error-output (frame))
@@ -843,10 +876,17 @@ standardised form."))
 (defgeneric frame-calling-frame (frame))
 (defgeneric frame-parent (frame))
 (defgeneric frame-panes (frame))
+;;; missing in the CLIM 2 spec, probably omission
+(defgeneric (setf frame-panes) (panes frame))
 (defgeneric frame-top-level-sheet (frame))
 (defgeneric frame-current-panes (frame))
 (defgeneric get-frame-pane (frame pane-name))
-(defgeneric fine-pane-named (frame pane-name))
+
+(defgeneric find-pane-named (frame pane-name)
+  (:documentation "Returns the pane in the frame `frame' whose name is
+`pane-name'. This can return any type of pane, not just CLIM stream
+panes."))
+
 (defgeneric frame-current-layout (frame))
 (defgeneric (setf frame-current-layout) (layout frame))
 (defgeneric frame-all-layouts (frame))
@@ -869,7 +909,7 @@ standardised form."))
 (defgeneric frame-find-innermost-applicable-presentation
     (frame input-context stream x y &key event))
 (defgeneric frame-input-context-button-press-handler 
-    (frame stream button-prees-event))
+    (frame stream button-press-event))
 (defgeneric frame-document-highlighted-presentation
     (frame presentation input-context window-context x y stream))
 (defgeneric frame-drag-and-drop-feedback
@@ -928,6 +968,7 @@ and `cell-align-y' are as for `formatting-item-list'."))
 (defgeneric (setf client-setting) (value frame setting))
 (defgeneric reset-frame (frame &rest client-settings))
 
+
 ;;;; 29.2
 ;;;;
 ;;;; FIXME: should we have &key &allow-other-keys here, to cause
@@ -993,11 +1034,16 @@ Returns a SPACE-REQUIREMENT object."))
 (defgeneric window-viewport-position (window))
 ;; (defgeneric (setf* window-viewport-position) (x y window))
 
+
 ;;; D.2 Basic Stream Functions
 
 ;;; Gray Streamoid functions, but not part of any Gray proposal.
 (defgeneric stream-pathname (stream))
 (defgeneric stream-truename (stream))
+
+;; E.1
+
+(defgeneric new-page (stream))
 
 ;;;;
 (defgeneric gadget-value (gadget))
@@ -1011,7 +1057,6 @@ Returns a SPACE-REQUIREMENT object."))
 (defgeneric gadget-client (gadget))
 
 ;;;
-
 (defgeneric text-style-mapping (port text-style &optional character-set))
 
 (defgeneric (setf text-style-mapping)

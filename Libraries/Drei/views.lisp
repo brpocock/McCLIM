@@ -285,15 +285,21 @@ all."
 
 (defmethod flip-undo-record ((record insert-record))
   (with-slots (buffer offset objects) record
+    (let ((%buffer buffer)
+	  (%offset offset)
+	  (%objects objects))
     (change-class record 'delete-record
-                  :length (length objects))
-    (insert-buffer-sequence buffer offset objects)))
+                  :length (length %objects))
+    (insert-buffer-sequence %buffer %offset %objects))))
 
 (defmethod flip-undo-record ((record delete-record))
   (with-slots (buffer offset length) record
+    (let ((%buffer buffer)
+	  (%offset offset)
+	  (%length length))
     (change-class record 'insert-record
-                  :objects (buffer-sequence buffer offset (+ offset length)))
-    (delete-buffer-range buffer offset length)))
+                  :objects (buffer-sequence %buffer %offset (+ %offset %length)))
+    (delete-buffer-range %buffer %offset %length))))
 
 (defmethod flip-undo-record ((record change-record))
   (with-slots (buffer offset objects) record
@@ -562,9 +568,9 @@ been defined that should be appropriate for most view classes.")
     ;; or similar.
     (apply #'make-instance (class-of view)
            (append initargs
-                   (loop for slot in (clim-mop:class-slots (class-of view))
-                      for slot-initarg = (first (clim-mop:slot-definition-initargs slot))
-                      for slot-name = (clim-mop:slot-definition-name slot)
+                   (loop for slot in (c2mop:class-slots (class-of view))
+                      for slot-initarg = (first (c2mop:slot-definition-initargs slot))
+                      for slot-name = (c2mop:slot-definition-name slot)
                       for slot-boundp = (slot-boundp view slot-name)
                       when (and slot-initarg slot-boundp)
                       nconc (list slot-initarg (slot-value view slot-name)))))))

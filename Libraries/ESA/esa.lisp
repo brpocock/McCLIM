@@ -39,18 +39,20 @@ will probably have the same value as `*application-frame*'.")
   (:documentation "Return a list of all the buffers of the application."))
 
 (defgeneric esa-current-buffer (esa)
-  (:documentation "Return the current buffer of APPLICATION-FRAME."))
+  (:documentation "Return the current buffer of the ESA instance ESA."))
 
 (defgeneric (setf esa-current-buffer) (new-buffer esa)
-  (:documentation "Replace the current buffer of
-APPLICATION-FRAME with NEW-BUFFER."))
+  (:documentation
+   #.(format nil "Replace the current buffer of the ESA instance~@
+                  ESA with NEW-BUFFER.")))
 
 (defun current-buffer ()
   "Return the currently active buffer of the running ESA."
   (esa-current-buffer *esa-instance*))
 
 (defun (setf current-buffer) (new-buffer)
-  "Return the currently active buffer of the running ESA."
+  #.(format nil "Replace the current buffer of the current running~@
+                 ESA instance with NEW-BUFFER.")
   (setf (esa-current-buffer *esa-instance*) new-buffer))
 
 (defgeneric windows (esa)
@@ -59,15 +61,18 @@ APPLICATION-FRAME with NEW-BUFFER."))
     '()))
 
 (defgeneric esa-current-window (esa)
-  (:documentation "Return the current window of ESA."))
+  (:documentation "Return the currently active window of ESA."))
 
 (defun current-window ()
   "Return the currently active window of the running ESA instance."
   (esa-current-window *esa-instance*))
 
+(defgeneric esa-command-table (esa)
+  (:documentation "Return command table of ESA."))
+
 (defvar *previous-command* nil
-  "When a command is being executed, the command previously
-executed by the application.")
+  #.(format nil "When a command is being executed, the command~@
+                 previously executed by the application."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
@@ -85,8 +90,7 @@ executed by the application.")
 ;;; Minibuffer pane
 
 (defgeneric minibuffer (application-frame)
-  (:documentation "Return the minibuffer of
-  `application-frame'."))
+  (:documentation "Return the minibuffer of APPLICATION-FRAME."))
 
 (defvar *minibuffer* nil
   "The minibuffer pane of the running application.")
@@ -233,15 +237,16 @@ current message was set."))
     (funcall handler-continuation)))
 
 (defun accept-1-for-minibuffer
-    (stream type &key
-     (view (stream-default-view stream))
-     (default nil defaultp) (default-type nil default-type-p)
-     provide-default insert-default (replace-input t)
-     history active-p prompt prompt-mode display-default
-     query-identifier (activation-gestures nil activationsp)
-     (additional-activation-gestures nil additional-activations-p)
-     (delimiter-gestures nil delimitersp)
-     (additional-delimiter-gestures nil  additional-delimiters-p))
+    (stream type
+     &key
+       (view (stream-default-view stream))
+       (default nil defaultp) (default-type nil default-type-p)
+       provide-default insert-default (replace-input t)
+       history active-p prompt prompt-mode display-default
+       query-identifier (activation-gestures nil activationsp)
+       (additional-activation-gestures nil additional-activations-p)
+       (delimiter-gestures nil delimitersp)
+       (additional-delimiter-gestures nil  additional-delimiters-p))
   (declare (ignore provide-default history active-p
 		   prompt prompt-mode
 		   display-default query-identifier))
@@ -268,45 +273,46 @@ current message was set."))
       ;; setup.
       (presentation-replace-input stream default default-type view))
     (with-input-context (type)
-        (object object-type event options)
-        (with-activation-gestures ((if additional-activations-p
-                                       additional-activation-gestures
-                                       activation-gestures)
-                                   :override activationsp)
-          (with-delimiter-gestures ((if additional-delimiters-p
-                                        additional-delimiter-gestures
-                                        delimiter-gestures)
-                                    :override delimitersp)
-            (let ((accept-results nil))
-              (climi::handle-empty-input (stream)
-                  (setq accept-results
-                        (multiple-value-list
-                         (if defaultp
-                             (funcall-presentation-generic-function
-                              accept type stream view
-                              :default default :default-type default-type)
-                             (funcall-presentation-generic-function
-                              accept type stream view))))
-                ;; User entered activation or delimiter gesture
-                ;; without any input.
-                (if defaultp
-                    (presentation-replace-input
-                     stream default default-type view :rescan nil)
-                    (simple-parse-error
-                     "Empty input for type ~S with no supplied default"
-                     type))
-                (setq accept-results (list default default-type)))
-              ;; Eat trailing activation gesture
-              ;; XXX what about pointer gestures?
-              ;; XXX and delimiter gestures?
-              ;;
-              ;; deleted check for *RECURSIVE-ACCEPT-P*
-              (let ((ag (read-char-no-hang stream nil stream t)))
-                (unless (or (null ag) (eq ag stream))
-                  (unless (activation-gesture-p ag)
-                    (unread-char ag stream))))
-              (values (car accept-results) 
-                      (if (cdr accept-results) (cadr accept-results) type)))))
+      (object object-type event options)
+      (with-activation-gestures ((if additional-activations-p
+				     additional-activation-gestures
+				     activation-gestures)
+				 :override activationsp)
+	(with-delimiter-gestures ((if additional-delimiters-p
+				      additional-delimiter-gestures
+				      delimiter-gestures)
+				  :override delimitersp)
+	  (let ((accept-results nil))
+	    (climi::handle-empty-input
+	     (stream)
+	     (setq accept-results
+		   (multiple-value-list
+		    (if defaultp
+			(funcall-presentation-generic-function
+			 accept type stream view
+			 :default default :default-type default-type)
+			(funcall-presentation-generic-function
+			 accept type stream view))))
+	     ;; User entered activation or delimiter gesture
+	     ;; without any input.
+	     (if defaultp
+		 (presentation-replace-input
+		  stream default default-type view :rescan nil)
+		 (simple-parse-error
+		  "Empty input for type ~S with no supplied default"
+		  type))
+	     (setq accept-results (list default default-type)))
+	    ;; Eat trailing activation gesture
+	    ;; XXX what about pointer gestures?
+	    ;; XXX and delimiter gestures?
+	    ;;
+	    ;; deleted check for *RECURSIVE-ACCEPT-P*
+	    (let ((ag (read-char-no-hang stream nil stream t)))
+	      (unless (or (null ag) (eq ag stream))
+		(unless (activation-gesture-p ag)
+		  (unread-char ag stream))))
+	    (values (car accept-results)
+		    (if (cdr accept-results) (cadr accept-results) type)))))
       ;; A presentation was clicked on, or something.
       (t
        (when (and replace-input 
@@ -356,7 +362,7 @@ on the `format-string' and the `format-args'."
 (defclass esa-pane-mixin ()
   (;; allows a certain number of commands to have some minimal memory
    (previous-command :initform nil :accessor previous-command)
-   (command-table :initarg :command-table :accessor command-table)))
+   (command-table :initarg :command-table :accessor esa-command-table)))
 
 (defmethod previous-command ((pane pane))
   nil)
@@ -390,23 +396,13 @@ bound to the current command processor.")
 	    (command-table-inherit-from
 	     (find-command-table start-table)))))
 
-;;; In Classic CLIM event-matches-gesture-name-p doesn't accept characters.
-#+(or mcclim building-mcclim)
+
 (defun gesture-matches-gesture-name-p (gesture gesture-name)
   (event-matches-gesture-name-p gesture gesture-name))
 
-#-(or mcclim building-mcclim)
-(defun gesture-matches-gesture-name-p (gesture gesture-name)
-  (etypecase gesture
-    (event
-     (event-matches-gesture-name-p gesture gesture-name))
-    (character
-     (clim-internals::keyboard-event-matches-gesture-name-p gesture
-							    gesture-name))))
-
 (defvar *meta-digit-table*
   (loop for i from 0 to 9
-       collect (list :keyboard (digit-char i) (make-modifier-state :meta))))
+	collect (list :keyboard (digit-char i) (make-modifier-state :meta))))
 
 (defun meta-digit (gesture)
   (position gesture *meta-digit-table*
@@ -499,11 +495,10 @@ their opinion. `Gestures' is a list of gestures.")
   event-based command processing schemes."))
 
 (defmethod (setf executingp) :after ((new-val (eql t)) (drei instant-macro-execution-mixin))
-  (loop
-     until (null (remaining-keys drei))
-     for gesture = (pop (remaining-keys drei))
-     do (process-gesture drei gesture)
-     finally (setf (executingp drei) nil)))
+  (loop until (null (remaining-keys drei))
+	for gesture = (pop (remaining-keys drei))
+	do (process-gesture drei gesture)
+	finally (setf (executingp drei) nil)))
 
 (defclass asynchronous-command-processor (command-processor
                                           instant-macro-execution-mixin)
@@ -533,7 +528,7 @@ processors, merges incoming dead keys with the following key."))
     (call-next-method command-processor gesture)))
 
 (defclass command-loop-command-processor (command-processor)
-  ((%command-table :reader command-table
+  ((%command-table :reader esa-command-table
                    :initarg :command-table
                    :initform nil)
    (%end-condition :reader end-condition
@@ -615,13 +610,11 @@ of a prefix arg returns 1 (and nil)."
     (cond ((gesture-matches-gesture-name-p
 	    first-gesture 'universal-argument)
 	   (let ((numarg 4))
-	     (loop
-                for gesture = (first gestures)
-                while (gesture-matches-gesture-name-p
-                       gesture 'universal-argument)
-                do
-                (setf numarg (* 4 numarg))
-                (pop gestures))
+	     (loop for gesture = (first gestures)
+		   while (gesture-matches-gesture-name-p
+			  gesture 'universal-argument)
+		   do (setf numarg (* 4 numarg))
+		      (pop gestures))
 	     (let ((gesture (pop gestures))
 		   (sign +1))
 	       (when (and (characterp gesture)
@@ -631,15 +624,13 @@ of a prefix arg returns 1 (and nil)."
                (cond ((and (characterp gesture)
 			   (digit-char-p gesture 10))
                       (setf numarg (digit-char-p gesture 10))
-		      (loop
-                         for gesture = (first gestures)
-                         while (and (characterp gesture)
-                                    (digit-char-p gesture 10))
-                         do
-                         (setf numarg (+ (* 10 numarg)
-                                         (digit-char-p gesture 10)))
-                         (pop gestures)
-                         finally (return (values (* numarg sign) t gestures))))
+		      (loop for gesture = (first gestures)
+			    while (and (characterp gesture)
+				       (digit-char-p gesture 10))
+			    do (setf numarg (+ (* 10 numarg)
+					       (digit-char-p gesture 10)))
+			       (pop gestures)
+			    finally (return (values (* numarg sign) t gestures))))
 		     (t
 		      (values (if (minusp sign) -1 numarg) t
                               (when gesture
@@ -652,17 +643,14 @@ of a prefix arg returns 1 (and nil)."
 	     (cond ((meta-digit first-gesture)
 		    (setf numarg (meta-digit first-gesture)))
 		   (t (setf sign -1)))
-	     (loop
-                for gesture = (first gestures)
-                while (meta-digit gesture)
-                do
-                (setf numarg (+ (* 10 numarg) (meta-digit gesture)))
-                (pop gestures)
-                finally
-                (return (values (if (and (= sign -1) (= numarg 0))
-                                    -1
-                                    (* sign numarg))
-                                t gestures)))))
+	     (loop for gesture = (first gestures)
+		   while (meta-digit gesture)
+		   do (setf numarg (+ (* 10 numarg) (meta-digit gesture)))
+		      (pop gestures)
+		   finally (return (values (if (and (= sign -1) (= numarg 0))
+					       -1
+					       (* sign numarg))
+					   t gestures)))))
 	  (t (values 1 nil (when first-gesture
                              (cons first-gesture gestures)))))))
 
@@ -686,7 +674,7 @@ never refer to a command."))
       (cond ((null gestures)
              t)
             (t
-             (let* ((command-table (command-table command-processor))
+             (let* ((command-table (esa-command-table command-processor))
                     (item (or (find-gestures-with-inheritance gestures command-table)
                               (command-for-unbound-gestures command-processor gestures))))
                (cond 
@@ -706,7 +694,7 @@ never refer to a command."))
                     (unwind-protect 
                          (setq command
                                (funcall *partial-command-parser*
-                                        (command-table command-processor)
+                                        (esa-command-table command-processor)
                                         *standard-input*
                                         command 0 (when prefix-p prefix-arg)))
                       ;; If we are macrorecording, store whatever the user
@@ -738,10 +726,9 @@ never refer to a command."))
   (unless (null (remaining-keys command-processor))
     (return-from esa-read-gesture
       (pop (remaining-keys command-processor))))
-  (loop
-     for gesture = (read-gesture :stream stream)
-     until (proper-gesture-p gesture)
-     finally (return gesture)))
+  (loop for gesture = (read-gesture :stream stream)
+	until (proper-gesture-p gesture)
+	finally (return gesture)))
 
 (defun esa-unread-gesture (gesture &key (command-processor *command-processor*)
                            (stream *standard-input*))
@@ -771,7 +758,7 @@ corresponding commands in `command-table' and invoke them using
       ('menu-item)
       (object)
       (with-input-context 
-          (`(command :command-table ,(command-table command-processor)))
+          (`(command :command-table ,(esa-command-table command-processor)))
           (object)
           (call-next-method)
         (command
@@ -785,7 +772,7 @@ corresponding commands in `command-table' and invoke them using
          (setq command
                (funcall
                 *partial-command-parser*
-                (command-table command-processor)
+                (esa-command-table command-processor)
                 *standard-input* command 0)))
        (funcall (command-executor command-processor)
                 command-processor command)))))
@@ -822,7 +809,7 @@ corresponding commands in `command-table' and invoke them using
 (defmethod esa-current-window ((esa esa-frame-mixin))
   (first (windows esa)))
 
-(defmethod command-table ((frame esa-frame-mixin))
+(defmethod esa-command-table ((frame esa-frame-mixin))
   (find-applicable-command-table frame))
 
 ;; Defaults for non-ESA-frames.
@@ -863,7 +850,7 @@ corresponding commands in `command-table' and invoke them using
 on `frame' should be found in."))
 
 (defmethod find-applicable-command-table ((frame esa-frame-mixin))
-  (command-table (car (windows frame))))
+  (esa-command-table (car (windows frame))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
@@ -980,7 +967,7 @@ used.")
 	      (eql modifiers +shift-key+))
       (setq char (keyboard-event-character ev)))
     (if char
-	#+(or mcclim building-mcclim) (climi::char-for-read char) #-(or mcclim building-mcclim) char
+        (climi::char-for-read char)
 	event)))
 
 (defmethod convert-to-gesture ((ev pointer-button-press-event))
@@ -1007,18 +994,6 @@ used.")
      table)
   nil)
 
-#-(or mcclim building-mcclim)
-(defun ensure-subtable (table gesture)
-  (let ((item (find-gesture-item table gesture)))
-    (when (or (null item) (not (eq (command-menu-item-type item) :menu)))
-      (let ((name (gensym)))
-	(make-command-table name :errorp nil)
-	(add-menu-item-to-command-table table (symbol-name name)
-					:menu name
-					:keystroke gesture)))
-    (command-menu-item-value (find-gesture-item table gesture))))
-
-#+(or mcclim building-mcclim)
 (defun ensure-subtable (table gesture)
   (let* ((event (make-instance
 		'key-press-event
@@ -1097,18 +1072,17 @@ First ask if modified buffers should be saved. If you decide not to save a modif
 ;;; Help
 
 (defgeneric invoke-with-help-stream (esa title continuation)
-  (:documentation "Invoke `continuation' with a single argument -
-a stream for writing on-line help for `esa' onto. The stream
-should have the title, or name, `title' (a string), but the
-specific meaning of this is left to the respective ESA."))
+  (:documentation
+   #.(format nil "Invoke CONTINUATION with a single argument - a stream~@
+                  for writing on-line help for ESA onto. The stream~@
+                  should have the title, or name, TITLE (a string), but the~@
+                  specific meaning of this is left to the respective ESA.")))
 
 (defmethod invoke-with-help-stream (frame title continuation)
   (funcall continuation
            (open-window-stream
             :label title
-            :input-buffer (#+(or mcclim building-mcclim) climi::frame-event-queue
-                             #-(or mcclim building-mcclim) silica:frame-input-buffer
-                             *application-frame*)
+            :input-buffer (climi::frame-event-queue *application-frame*)
             :width 400)))
 
 (defmacro with-help-stream ((stream title) &body body)
@@ -1402,12 +1376,12 @@ sense for the ESA."
       (when (plusp (length keystrokes))
         (princ "It is bound to " stream)
         (loop for gestures-list on (first keystrokes)
-           do (with-drawing-options (stream :ink +dark-blue+
-					    :text-style '(:fix nil nil))
-                (format stream "~{~A~^ ~}"
-                        (mapcar #'gesture-name (reverse (first gestures-list)))))
-           when (not (null (rest gestures-list)))
-           do (princ ", " stream))
+	      do (with-drawing-options (stream :ink +dark-blue+
+					       :text-style '(:fix nil nil))
+		   (format stream "~{~A~^ ~}"
+			   (mapcar #'gesture-name (reverse (first gestures-list)))))
+	      when (not (null (rest gestures-list)))
+		do (princ ", " stream))
         (terpri stream))
       (terpri stream)
       (print-docstring-for-command command-name command-table stream)
@@ -1649,26 +1623,23 @@ Use C-x ( to start and C-x ) to finish recording a keyboard macro."
 				   standard-application-frame)
   ()
   (:panes
-   (window (let* ((my-pane 
-		(make-pane 'example-pane
-			   :width 900 :height 400
-			   :display-function 'display-my-pane
-			   :command-table 'global-example-table))
-	       (my-info-pane
-		(make-pane 'example-info-pane
-			   :master-pane my-pane
-			   :width 900)))
-	  (setf (windows *application-frame*) (list my-pane))
-	  (vertically ()
-	    (scrolling ()
-	      my-pane)
-	    my-info-pane)))
+   (window (let* ((my-pane (make-pane 'example-pane
+				      :width 900 :height 400
+				      :display-function 'display-my-pane
+				      :command-table 'global-example-table))
+		  (my-info-pane (make-pane 'example-info-pane
+					   :master-pane my-pane
+					   :width 900)))
+	     (setf (windows *application-frame*) (list my-pane))
+	     (vertically ()
+			 (scrolling ()
+				    my-pane)
+			 my-info-pane)))
    (minibuffer (make-pane 'example-minibuffer-pane :width 900)))
   (:layouts
-   (default
-       (vertically (:scroll-bars nil)
-	 window
-	 minibuffer)))
+   (default (vertically (:scroll-bars nil)
+			window
+			minibuffer)))
   (:top-level (esa-top-level)))
 
 (defun display-my-pane (frame pane)
@@ -1688,5 +1659,3 @@ Use C-x ( to start and C-x ) to finish recording a keyboard macro."
 
 (define-command-table global-example-table
     :inherit-from (global-esa-table keyboard-macro-table))
-
-

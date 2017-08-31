@@ -184,6 +184,10 @@
            #:with-output-to-string #:with-package-iterator #:with-simple-restart #:with-slots
            #:with-standard-io-syntax #:write #:write-byte #:write-char #:write-line #:write-sequence
            #:write-string #:write-to-string #:y-or-n-p #:yes-or-no-p #:zerop))
+        ;; XXX: we could use `closer-common-lisp', but some of McCLIM
+        ;; MOP code is not conformant it seems (we have problems with
+        ;; unknown `:default' argument dropping us in the debugger).
+        ;(packages '(:closer-common-lisp))
         (packages '(:common-lisp))
         (gray-symbols
          '(#:fundamental-stream
@@ -560,6 +564,7 @@
    #:cursor-active                      ;generic function
    #:cursor-focus                       ;generic function
    #:cursor-position                    ;generic function
+   #:cursor-set-position                ;generic function
    #:cursor-sheet                       ;generic function
    #:cursor-state                       ;generic function
    #:cursor-visibility                  ;generic function
@@ -1573,9 +1578,6 @@
   ;; mute-repainting-mixin, through there is a sheet-mute-repainting-mixin
   ;; oriented-gadget, through there is a oriented-gadget-mixin
 
-  ;; output-record-refined-sensitivity-test:
-  ;; there is mention of this symbol in output-recording.tex. spelling error?
-
   ;; pointer-button-click-event
   ;; this is mentioned in silica.tex. spelling error?
 
@@ -1616,7 +1618,6 @@
   ;; scroll-bar-drag-up-line-callback
   ;; scroll-bar-drag-up-page-callback
   ;; spacer-pane
-  ;; standard-gadget
   ;; stream-pointers
   ;; stream-primary-pointer
   ;; stream-redisplayable-p
@@ -1944,7 +1945,14 @@
    #:define-bitmap-file-reader
    #:unsupported-bitmap-format
    #:bitmap-format
-   #:*default-vertical-scroll-bar-position*))
+   #:*default-vertical-scroll-bar-position*
+
+   #:find-frame-type
+   ;; images
+   #:rgb-image
+   #:rgb-pattern
+   #:xpm-parse-file
+   #:*xpm-x11-colors*))
 
 ;;; Symbols that must be defined by a backend.
 ;;;
@@ -2042,6 +2050,11 @@
   (:nicknames :climi)
   #+excl
   (:import-from :excl compile-system load-system)
+  (:import-from #:alexandria
+                #:clamp
+                #:make-keyword
+                #:ensure-gethash
+		#:with-gensyms)
   (:intern #:letf))
 
 (defpackage :clim-user

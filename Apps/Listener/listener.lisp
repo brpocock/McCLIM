@@ -133,8 +133,7 @@
      :documentation ((object stream)
                      (declare (ignore object))
                      (format stream "Choose package")))
-  (current-package)
-  nil)
+    (object))
 
 ;;; Lisp listener command loop
 

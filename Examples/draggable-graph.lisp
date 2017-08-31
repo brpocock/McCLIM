@@ -30,13 +30,14 @@
 		    :display-time t)))
 
 (defun generate-graph (frame pane)
+  (declare (ignore frame))
   (format-graph-from-roots
    (list (find-class 'number))
    (lambda (object stream)
-     (present (clim-mop:class-name object)
+     (present (class-name object)
 	      (presentation-type-of object)
 	      :stream stream))
-   #'clim-mop:class-direct-subclasses
+   #'c2mop:class-direct-subclasses
    :stream pane))
 
 (defun record-parent-chain (record)
@@ -84,7 +85,7 @@
     (make-rectangle* x0 y0 x1 y1)))
 
 (define-draggable-graph-demo-command (com-drag-node)
-    ((record t) (x 'real) (y 'real))
+    ((record t) (x real) (y real))
   (let* ((graph-node (find-graph-node record))
 	 (edges (node-edges graph-node))
 	 (erase-region (stupid-copy-rectangle
@@ -113,9 +114,9 @@
          
 (define-presentation-to-command-translator record-dragging-translator
     (t com-drag-node draggable-graph-demo
-       :tester ((presentation)
+       :tester ((object presentation)
                 (find-graph-node presentation)))
-  (presentation x y)
+    (object presentation x y)
   (list presentation x y))
 
 ;;; (CSR) This demo code is quite cool; visually, it's a little

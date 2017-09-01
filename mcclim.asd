@@ -1,3 +1,4 @@
+;;; -*- Mode: Lisp -*-
 
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000, 2014 by 

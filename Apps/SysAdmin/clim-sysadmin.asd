@@ -8,8 +8,5 @@
 (defsystem :clim-sysadmin
   :depends-on (:mcclim :oliphaunt)
   :components
-  ((:module "Apps/SysAdmin"
-            :pathname #.(make-pathname :directory '(:relative "Apps" "SysAdmin"))
-            :components
-            ((:file "clim-sysadmin")))))
+  ((:file "clim-sysadmin")))
 
